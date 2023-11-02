@@ -1,10 +1,10 @@
 
 local little_spider_arguments = {
     scale = 1/3,
-    leg_scale = 1/2,
+    leg_scale = 0.75,
     name = "little-spidertron",
-    leg_thickness = 2,
-    leg_movement_speed = 3,
+    leg_thickness = 1.5,
+    leg_movement_speed = 5,
 }
 create_spidertron(little_spider_arguments)
 local little_spider_entity = data.raw["spider-vehicle"]["little-spidertron"]
@@ -15,6 +15,12 @@ little_spider_entity.equipment_grid = nil
 little_spider_entity.allow_passengers = false
 little_spider_entity.is_military_target = false
 little_spider_entity.collision_box = {{-0.005, -0.005}, {0.005, 0.005}}
+-- little_spider_entity.collision_mask = {"object-layer", "water-tile", "rail-layer"}
+
+for i = 1, 8 do
+    local leg = data.raw["spider-leg"]["little-spidertron-leg-" .. i]
+    leg.collision_mask = {"object-layer", "water-tile", "rail-layer"}
+end
 
 local little_spider_recipe = table.deepcopy(data.raw["recipe"]["spidertron"])
 little_spider_recipe.name = "little-spidertron"
