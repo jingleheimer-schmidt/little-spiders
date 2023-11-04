@@ -46,33 +46,17 @@ local function on_little_spider_built(spider)
   table.insert(global.available_spiders[player.index], spider)
 end
 
----@param event EventData.on_built_entity
-local function on_built_entity(event)
-  local entity = event.created_entity
+---@param event EventData.on_built_entity | EventData.on_robot_built_entity | EventData.script_raised_built
+local function on_entity_created(event)
+  local entity = event.created_entity or event.entity
   if entity.name == "little-spidertron" then
     on_little_spider_built(entity)
   end
 end
 
----@param event EventData.on_robot_built_entity
-local function on_robot_built_entity(event)
-  local entity = event.created_entity
-  if entity.name == "little-spidertron" then
-    on_little_spider_built(entity)
-  end
-end
-
----@param event EventData.script_raised_built
-local function script_raised_built(event)
-  local entity = event.entity
-  if entity.name == "little-spidertron" then
-    on_little_spider_built(entity)
-  end
-end
-
-script.on_event(defines.events.on_built_entity, on_built_entity)
-script.on_event(defines.events.on_robot_built_entity, on_robot_built_entity)
-script.on_event(defines.events.script_raised_built, script_raised_built)
+script.on_event(defines.events.on_built_entity, on_entity_created)
+script.on_event(defines.events.on_robot_built_entity, on_entity_created)
+script.on_event(defines.events.script_raised_built, on_entity_created)
 
 ---@param event EventData.on_script_path_request_finished
 local function on_script_path_request_finished(event)
