@@ -1,35 +1,7 @@
 
 --[[ factorio mod little spiders control script created by asher_sky --]]
 
----@param message string
-local function chatty_print(message)
-  global.chatty_print = false
-  -- global.chatty_print = true
-  if not global.chatty_print then return end
-  game.print("[" .. game.tick .. "] " .. message)
-end
 
----@param entity LuaEntity?
----@return string
-local function get_chatty_name(entity)
-  if not entity then return "" end
-  local id = entity.entity_label or entity.backer_name or entity.unit_number or script.register_on_entity_destroyed(entity)
-  if entity.type == "character" and entity.player then
-    id = entity.player.name
-  end
-  local name = entity.name .. " " .. id
-  local color = entity.color
-  if color then
-    name = "[color=" .. color.r .. "," .. color.g .. "," .. color.b .. "]" .. name .. "[/color]"
-  end
-  return "[" .. name .. "]"
-end
-
----@param entity LuaEntity|MapPosition|TilePosition
----@return string
-local function get_chatty_position(entity)
-  local position = serpent.line(entity.position or entity)
-  return position
 end
 
 ---@param spider LuaEntity
