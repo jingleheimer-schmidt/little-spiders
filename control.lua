@@ -4,7 +4,12 @@
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
 
+local function on_init()
+  global.spiders = {}
+  global.available_spiders = {}
+  global.tasks = {}
 end
+script.on_init(on_init)
 
 ---@param spider LuaEntity
 local function on_little_spider_built(spider)
