@@ -1,6 +1,8 @@
 
 --[[ factorio mod little spiders control script created by asher_sky --]]
 
+local general_util = require("util/general")
+local entity_uuid = general_util.entity_uuid
 
 end
 
