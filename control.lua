@@ -11,31 +11,28 @@ local function on_init()
 end
 script.on_init(on_init)
 
----@param spider LuaEntity
-local function on_little_spider_built(spider)
-  local player = spider.last_user
-  if not (player and player.character) then return end
-  spider.follow_target = player.character
-  spider.color = player.chat_color
-  global.little_spiders = global.little_spiders or {}
-  global.little_spiders[player.index] = global.little_spiders[player.index] or {}
-  global.little_spiders[player.index][spider.unit_number] = spider
-  global.available_spiders = global.available_spiders or {} --[[@type table<integer, LuaEntity>]]
-  global.available_spiders[player.index] = global.available_spiders[player.index] or {}
-  table.insert(global.available_spiders[player.index], spider)
-end
+---@param event EventData.on_built_entity
+local function on_spider_created(event)
 
----@param event EventData.on_built_entity | EventData.on_robot_built_entity | EventData.script_raised_built
-local function on_entity_created(event)
-  local entity = event.created_entity or event.entity
-  if entity.name == "little-spidertron" then
-    on_little_spider_built(entity)
+  local spider = event.created_entity
+  local player_index = event.player_index
+  local player = game.get_player(player_index)
+  local character = player and player.character
+
+  if player and character then
+    spider.color = character.color
+    spider.follow_target = character
+    local uuid = entity_uuid(spider)
+    global.spiders[player_index] = global.spiders[player_index] or {}
+    global.spiders[player_index][uuid] = spider
+    global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+    table.insert(global.available_spiders[player_index], spider)
   end
+
 end
 
-script.on_event(defines.events.on_built_entity, on_entity_created)
-script.on_event(defines.events.on_robot_built_entity, on_entity_created)
-script.on_event(defines.events.script_raised_built, on_entity_created)
+local filter = { filter = "name", name = "little-spidertron" }
+script.on_event(defines.events.on_built_entity, on_spider_created, filter)
 
 ---@param event EventData.on_script_path_request_finished
 local function on_script_path_request_finished(event)
