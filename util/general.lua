@@ -1,4 +1,6 @@
 
+local floor = math.floor
+
 ---@param entity LuaEntity
 ---@return string|integer
 local function entity_uuid(entity)
@@ -9,8 +11,8 @@ local function entity_uuid(entity)
         local name = entity.name
         local surface = entity.surface_index
         local position = entity.position
-        local x = math.floor(position.x * 1000)
-        local y = math.floor(position.y * 1000)
+        local x = floor(position.x * 1000)
+        local y = floor(position.y * 1000)
         local uuid = string.format("[%s][%s][%d][%d]", name, surface, x, y)
         return uuid
     end
