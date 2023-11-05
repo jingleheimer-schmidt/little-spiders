@@ -29,7 +29,31 @@ local function randomize_table(sorted_table)
     return randomized
 end
 
+local function random_pairs(t)
+    -- Create a table of keys
+    local keys = {}
+    for key in pairs(t) do
+        table.insert(keys, key)
+    end
+
+    -- Shuffle the keys
+    for i = #keys, 2, -1 do
+        local j = math.random(i)
+        keys[i], keys[j] = keys[j], keys[i]
+    end
+
+    -- Iterator function
+    local index = 0
+    return function()
+        index = index + 1
+        if keys[index] then
+            return keys[index], t[keys[index]]
+        end
+    end
+end
+
 return {
     entity_uuid = entity_uuid,
     randomize_table = randomize_table,
+    random_pairs = random_pairs,
 }
