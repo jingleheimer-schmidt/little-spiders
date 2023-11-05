@@ -322,89 +322,92 @@ local function on_tick(event)
     local inventory = character.get_inventory(defines.inventory.character_main)
     local character_position_x = character.position.x
     local character_position_y = character.position.y
-    local nearby_entities = character.surface.find_entities({
+    local area = {
       {character_position_x - 20, character_position_y - 20},
       {character_position_x + 20, character_position_y + 20},
+    }
+    local to_be_deconstructed = surface.find_entities_filtered({
+      area = area,
+      to_be_deconstructed = true,
     })
-    -- local nearby_entities = surface.find_entities_filtered({
-    --   area = {
-    --     {character_position_x - 20, character_position_y - 20},
-    --     {character_position_x + 20, character_position_y + 20},
-    --   },
-    --   force = player.force,
-    --   limit = #global.available_spiders[player_index] + 1,
-    -- })
-    local to_be_deconstructed = {}
-    local to_be_upgraded = {}
-    local to_be_revived = {}
-    for _, entity in pairs(nearby_entities) do
-      local entity_id = entity_uuid(entity)
-      if entity.to_be_deconstructed() then
-        to_be_deconstructed[entity_id] = entity
-      elseif entity.to_be_upgraded() then
-        to_be_upgraded[entity_id] = entity
-      elseif entity.type == "entity-ghost" then
-        to_be_revived[entity_id] = entity
-      end
-    end
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
-    if not decon_ordered then
-      for entity_id, decon_entity in pairs(to_be_deconstructed) do
-        if not global.tasks.by_entity[entity_id] then
-          if inventory and inventory.count_empty_stacks() > 0 then
-            local spider = table.remove(global.available_spiders[player_index])
-            if spider then
-              assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
-              decon_ordered = true
-            end
-          end
-        end
-      end
-    end
-    if not decon_ordered then
-      for entity_id, revive_entity in pairs(to_be_revived) do
-        if not global.tasks.by_entity[entity_id] then
-          local items = revive_entity.ghost_prototype.items_to_place_this
-          local item_stack = items and items[1]
-          if item_stack then
-            local item_name = item_stack.name
-            local item_count = item_stack.count or 1
-            if inventory and inventory.get_item_count(item_name) >= item_count then
+    while #global.available_spiders[player_index] > 0 do
+      if not decon_ordered then
+        -- local randomized = randomize_table(to_be_deconstructed) --[[@type LuaEntity[]-]]
+        -- for _, decon_entity in pairs(randomized) do
+        for _, decon_entity in random_pairs(to_be_deconstructed) do
+          local entity_id = entity_uuid(decon_entity)
+          if not global.tasks.by_entity[entity_id] then
+            if inventory and inventory.count_empty_stacks() > 0 then
               local spider = table.remove(global.available_spiders[player_index])
               if spider then
-                assign_new_task("revive", entity_id, revive_entity, spider, player)
-                revive_ordered = true
+                assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
+                decon_ordered = true
               end
             end
           end
         end
       end
-    end
-    if not revive_ordered then
-      for entity_id, upgrade_entity in pairs(to_be_upgraded) do
-        if not global.tasks.by_entity[entity_id] then
-          local upgrade_target = upgrade_entity.get_upgrade_target()
-          local items = upgrade_target and upgrade_target.items_to_place_this
-          local item_stack = items and items[1]
-          if upgrade_target and item_stack then
-            local item_name = item_stack.name
-            local item_count = item_stack.count or 1
-            if inventory and inventory.get_item_count(item_name) >= item_count then
-              local spider = table.remove(global.available_spiders[player_index])
-              if spider then
-                assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
-                upgrade_ordered = true
+      if not decon_ordered then
+        local to_be_revived = surface.find_entities_filtered({
+          area = area,
+          type = "entity-ghost",
+        })
+        -- local randomized = randomize_table(to_be_revived) --[[@type LuaEntity[]-]]
+        -- for _, revive_entity in pairs(randomized) do
+        for _, revive_entity in random_pairs(to_be_revived) do
+          local entity_id = entity_uuid(revive_entity)
+          if not global.tasks.by_entity[entity_id] then
+            local items = revive_entity.ghost_prototype.items_to_place_this
+            local item_stack = items and items[1]
+            if item_stack then
+              local item_name = item_stack.name
+              local item_count = item_stack.count or 1
+              if inventory and inventory.get_item_count(item_name) >= item_count then
+                local spider = table.remove(global.available_spiders[player_index])
+                if spider then
+                  assign_new_task("revive", entity_id, revive_entity, spider, player)
+                  revive_ordered = true
+                end
               end
             end
           end
         end
       end
+      if not revive_ordered then
+        local to_be_upgraded = surface.find_entities_filtered({
+          area = area,
+          to_be_upgraded = true,
+        })
+        -- local randomized = randomize_table(to_be_upgraded) --[[@type LuaEntity[]-]]
+        -- for _, upgrade_entity in pairs(randomized) do
+        for _, upgrade_entity in random_pairs(to_be_upgraded) do
+          local entity_id = entity_uuid(upgrade_entity)
+          if not global.tasks.by_entity[entity_id] then
+            local upgrade_target = upgrade_entity.get_upgrade_target()
+            local items = upgrade_target and upgrade_target.items_to_place_this
+            local item_stack = items and items[1]
+            if upgrade_target and item_stack then
+              local item_name = item_stack.name
+              local item_count = item_stack.count or 1
+              if inventory and inventory.get_item_count(item_name) >= item_count then
+                local spider = table.remove(global.available_spiders[player_index])
+                if spider then
+                  assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
+                  upgrade_ordered = true
+                end
+              end
+            end
+          end
+        end
+      end
+      break
     end
     ::next_player::
   end
 end
 
 -- script.on_event(defines.events.on_tick, on_tick)
-script.on_nth_tick(20, on_tick)
+script.on_nth_tick(45, on_tick)
