@@ -115,6 +115,8 @@ local function on_spider_reached_entity(event)
       return
     end
 
+    local retry_task = false
+
     if task_type == "deconstruct" then
       local entity_position = entity.position
       while entity.valid do
@@ -122,6 +124,8 @@ local function on_spider_reached_entity(event)
       end
       draw_line(spider.surface, character, spider, player.color, 20)
       -- draw_line(spider.surface, spider, entity_position, color.red)
+      global.tasks.by_entity[entity_id].status = "completed"
+      global.tasks.by_spider[spider_id].status = "completed"
 
     elseif task_type == "revive" then
       local items = entity.ghost_prototype.items_to_place_this
@@ -135,6 +139,17 @@ local function on_spider_reached_entity(event)
             inventory.remove(item_stack)
             draw_line(spider.surface, character, spider, player.color, 20)
             -- draw_line(spider.surface, spider, revived_entity, color.blue)
+            global.tasks.by_entity[entity_id].status = "completed"
+            global.tasks.by_spider[spider_id].status = "completed"
+          else
+            local ghost_position = entity.position
+            local spider_position = spider.position
+            local distance = maximum_length(entity.bounding_box) + 1
+            for i = 1, 45, 5 do
+              local rotatated_position = rotate_around_target(ghost_position, spider_position, i, distance)
+              spider.add_autopilot_destination(rotatated_position)
+            end
+            retry_task = true
           end
         end
       end
@@ -164,17 +179,27 @@ local function on_spider_reached_entity(event)
             inventory.remove(item_stack)
             draw_line(spider.surface, character, spider, player.color, 20)
             -- draw_line(spider.surface, spider, upgraded_entity, color.green)
+            global.tasks.by_entity[entity_id].status = "completed"
+            global.tasks.by_spider[spider_id].status = "completed"
+          else
+            local upgrade_position = entity.position
+            local spider_position = spider.position
+            local distance = maximum_length(entity.bounding_box) + 1
+            for i = 1, 45, 5 do
+              local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, distance)
+              spider.add_autopilot_destination(rotatated_position)
+            end
+            retry_task = true
           end
         end
       end
+    if not retry_task then
+      global.tasks.by_entity[entity_id] = nil
+      global.tasks.by_spider[spider_id] = nil
+      table.insert(global.available_spiders[player.index], spider)
+      spider.color = player.color
+      spider.follow_target = character
     end
-
-    global.tasks.by_entity[entity_id] = nil
-    global.tasks.by_spider[spider_id] = nil
-    table.insert(global.available_spiders[player.index], spider)
-    spider.color = player.color
-    spider.follow_target = character
-
   end
 end
 
