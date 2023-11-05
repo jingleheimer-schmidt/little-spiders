@@ -32,12 +32,12 @@ end
 local function random_pairs(t)
     -- Create a table of keys
     local keys = {}
-    for key in pairs(t) do
-        table.insert(keys, key)
+    for key = 1, #t do
+        keys[key] = key
     end
 
     -- Shuffle the keys
-    for i = #keys, 2, -1 do
+    for i = #t, 2, -1 do
         local j = math.random(i)
         keys[i], keys[j] = keys[j], keys[i]
     end
@@ -52,8 +52,18 @@ local function random_pairs(t)
     end
 end
 
+local function shuffle_array(array)
+    local length = #array
+    for i = length, 2, -1 do
+        local j = math.random(i)
+        array[i], array[j] = array[j], array[i]
+    end
+
+end
+
 return {
     entity_uuid = entity_uuid,
     randomize_table = randomize_table,
     random_pairs = random_pairs,
+    shuffle_array = shuffle_array,
 }
