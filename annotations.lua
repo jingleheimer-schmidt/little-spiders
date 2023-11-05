@@ -7,6 +7,7 @@
 ---@field task_type string
 ---@field player LuaPlayer
 ---@field status string
+---@field render_ids table<integer, boolean>
 
 ---@alias uuid string|integer
 
