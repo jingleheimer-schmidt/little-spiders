@@ -297,6 +297,7 @@ local function assign_new_task(type, entity_id, entity, spider, player)
     task_type = type,
     player = player,
     status = "path_requested",
+    render_ids = {},
   }
   global.tasks.by_entity[entity_id] = task_data
   global.tasks.by_spider[spider_id] = task_data
