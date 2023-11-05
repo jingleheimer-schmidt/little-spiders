@@ -14,6 +14,13 @@ little_spider_entity.trash_inventory_size = 0
 little_spider_entity.equipment_grid = nil
 little_spider_entity.allow_passengers = false
 little_spider_entity.is_military_target = false
+local selection_box = little_spider_entity.selection_box
+if selection_box then
+    selection_box[1][1] = selection_box[1][1] * 2
+    selection_box[1][2] = selection_box[1][2] * 2
+    selection_box[2][1] = selection_box[2][1] * 2
+    selection_box[2][2] = selection_box[2][2] * 2
+end
 -- little_spider_entity.collision_box = {{-0.005, -0.005}, {0.005, 0.005}}
 -- little_spider_entity.collision_mask = {"object-layer", "water-tile", "rail-layer"}
 
