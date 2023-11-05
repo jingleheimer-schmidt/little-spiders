@@ -46,6 +46,8 @@ local function on_spider_created(event)
     table.insert(global.available_spiders[player_index], spider)
   end
 
+  script.register_on_entity_destroyed(spider)
+
 end
 
 local filter = {{ filter = "name", name = "little-spidertron" }}
