@@ -83,7 +83,7 @@ script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
-  if not spider.name == "little-spidertron" then return end
+  if not (spider.name == "little-spidertron") then return end
   local destinations = spider.autopilot_destinations
   if #destinations == 0 then
 
