@@ -18,6 +18,18 @@ local function entity_uuid(entity)
     end
 end
 
+---@param sorted_table table
+---@return table
+local function randomize_table(sorted_table)
+    local randomized = {}
+    for _, value in pairs(sorted_table) do
+        local index = math.random(1, #randomized + 1)
+        table.insert(randomized, index, value)
+    end
+    return randomized
+end
+
 return {
     entity_uuid = entity_uuid,
+    randomize_table = randomize_table,
 }
