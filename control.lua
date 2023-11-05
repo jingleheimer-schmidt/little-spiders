@@ -313,9 +313,11 @@ end
 ---@param event EventData.on_tick
 local function on_tick(event)
   for _, player in pairs(game.connected_players) do
+    local player_index = player.index
+    global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+    if #global.available_spiders[player_index] == 0 then goto next_player end
     local character = player.character
     if not character then goto next_player end
-    local player_index = player.index
     local surface = character.surface
     local inventory = character.get_inventory(defines.inventory.character_main)
     local character_position_x = character.position.x
