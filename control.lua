@@ -30,7 +30,6 @@ script.on_init(on_init)
 
 ---@param event EventData.on_built_entity
 local function on_spider_created(event)
-
   local spider = event.created_entity
   local player_index = event.player_index
   local player = game.get_player(player_index)
@@ -47,10 +46,9 @@ local function on_spider_created(event)
   end
 
   script.register_on_entity_destroyed(spider)
-
 end
 
-local filter = {{ filter = "name", name = "little-spidertron" }}
+local filter = { { filter = "name", name = "little-spidertron" } }
 script.on_event(defines.events.on_built_entity, on_spider_created, filter)
 
 ---@param event EventData.on_entity_destroyed
@@ -86,7 +84,6 @@ local function on_spider_reached_entity(event)
   if not (spider.name == "little-spidertron") then return end
   local destinations = spider.autopilot_destinations
   if #destinations == 0 then
-
     local spider_id = entity_uuid(spider)
     local task_data = global.tasks.by_spider[spider_id]
     local entity = task_data.entity
@@ -120,7 +117,7 @@ local function on_spider_reached_entity(event)
     if task_type == "deconstruct" then
       local entity_position = entity.position
       while entity.valid do
-        local result = entity.mine{inventory = inventory, force = true, ignore_minable = false, raise_destroyed = true}
+        local result = entity.mine { inventory = inventory, force = true, ignore_minable = false, raise_destroyed = true }
       end
       local render_id = draw_line(spider.surface, character, spider, player.color, 20)
       global.tasks.by_entity[entity_id].render_ids[render_id] = true
@@ -135,7 +132,7 @@ local function on_spider_reached_entity(event)
         local item_name = item_stack.name
         local item_count = item_stack.count or 1
         if inventory.get_item_count(item_name) >= item_count then
-          local dictionary, revived_entity = entity.revive({false, true})
+          local dictionary, revived_entity = entity.revive({ false, true })
           if revived_entity then
             inventory.remove(item_stack)
             local render_id = draw_line(spider.surface, character, spider, player.color, 20)
@@ -177,7 +174,8 @@ local function on_spider_reached_entity(event)
             fast_replace = true,
             force = entity.force,
             spill = true,
-            type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
+            type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or
+            ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
             raise_built = true,
           }
           ---@diagnostic enable:missing-fields
@@ -236,7 +234,8 @@ local function on_script_path_request_finished(event)
       global.tasks.by_entity[entity_id].status = "on_the_way"
       global.tasks.by_spider[spider_id].status = "on_the_way"
       local task_type = global.tasks.by_entity[entity_id].task_type
-      local task_color = task_type == "deconstruct" and color.red or task_type == "revive" and color.blue or task_type == "upgrade" and color.green
+      local task_color = task_type == "deconstruct" and color.red or task_type == "revive" and color.blue or
+      task_type == "upgrade" and color.green
       spider.color = task_color or color.black
       local render_id = draw_line(spider.surface, entity, spider, task_color or color.white)
       global.tasks.by_entity[entity_id].render_ids[render_id] = true
@@ -323,8 +322,8 @@ local function on_tick(event)
     local character_position_x = character.position.x
     local character_position_y = character.position.y
     local area = {
-      {character_position_x - 20, character_position_y - 20},
-      {character_position_x + 20, character_position_y + 20},
+      { character_position_x - 20, character_position_y - 20 },
+      { character_position_x + 20, character_position_y + 20 },
     }
     local to_be_deconstructed = surface.find_entities_filtered({
       area = area,
@@ -333,10 +332,9 @@ local function on_tick(event)
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
+
     while #global.available_spiders[player_index] > 0 do
-      if not decon_ordered then
-        -- local randomized = randomize_table(to_be_deconstructed) --[[@type LuaEntity[]-]]
-        -- for _, decon_entity in pairs(randomized) do
+      if not upgrade_ordered then
         for _, decon_entity in random_pairs(to_be_deconstructed) do
           local entity_id = entity_uuid(decon_entity)
           if not global.tasks.by_entity[entity_id] then
@@ -350,13 +348,12 @@ local function on_tick(event)
           end
         end
       end
+
       if not decon_ordered then
         local to_be_revived = surface.find_entities_filtered({
           area = area,
           type = "entity-ghost",
         })
-        -- local randomized = randomize_table(to_be_revived) --[[@type LuaEntity[]-]]
-        -- for _, revive_entity in pairs(randomized) do
         for _, revive_entity in random_pairs(to_be_revived) do
           local entity_id = entity_uuid(revive_entity)
           if not global.tasks.by_entity[entity_id] then
@@ -376,13 +373,12 @@ local function on_tick(event)
           end
         end
       end
+
       if not revive_ordered then
         local to_be_upgraded = surface.find_entities_filtered({
           area = area,
           to_be_upgraded = true,
         })
-        -- local randomized = randomize_table(to_be_upgraded) --[[@type LuaEntity[]-]]
-        -- for _, upgrade_entity in pairs(randomized) do
         for _, upgrade_entity in random_pairs(to_be_upgraded) do
           local entity_id = entity_uuid(upgrade_entity)
           if not global.tasks.by_entity[entity_id] then
@@ -409,5 +405,4 @@ local function on_tick(event)
   end
 end
 
--- script.on_event(defines.events.on_tick, on_tick)
 script.on_nth_tick(45, on_tick)
