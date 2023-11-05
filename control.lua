@@ -238,10 +238,16 @@ local function on_script_path_request_finished(event)
       local task_type = global.tasks.by_entity[entity_id].task_type
       local task_color = task_type == "deconstruct" and color.red or task_type == "revive" and color.blue or task_type == "upgrade" and color.green
       spider.color = task_color or color.black
-      draw_line(spider.surface, entity, spider, task_color or color.white)
+      local render_id = draw_line(spider.surface, entity, spider, task_color or color.white)
+      global.tasks.by_entity[entity_id].render_ids[render_id] = true
+      global.tasks.by_spider[spider_id].render_ids[render_id] = true
+
     else
       table.insert(global.available_spiders[player.index], spider)
       spider.color = player.color
+      local render_id = draw_line(spider.surface, spider, entity, color.white, 10)
+      global.tasks.by_entity[entity_id].render_ids[render_id] = true
+      global.tasks.by_spider[spider_id].render_ids[render_id] = true
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
     end
