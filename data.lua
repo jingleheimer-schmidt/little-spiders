@@ -14,6 +14,20 @@ little_spider_entity.trash_inventory_size = 0
 little_spider_entity.equipment_grid = nil
 little_spider_entity.allow_passengers = false
 little_spider_entity.is_military_target = false
+local legs = little_spider_entity.spider_engine.legs
+if legs[1] then
+    for _, leg in pairs(legs) do
+        for _, trigger in pairs(leg.leg_hit_the_ground_trigger) do
+            trigger.repeat_count = 1
+            trigger.probability = 0.25
+        end
+    end
+else
+    for _, trigger in pairs(legs.leg_hit_the_ground_trigger) do
+        trigger.repeat_count = 1
+        trigger.probability = 0.25
+    end
+end
 local selection_box = little_spider_entity.selection_box
 if selection_box then
     selection_box[1][1] = selection_box[1][1] * 2
