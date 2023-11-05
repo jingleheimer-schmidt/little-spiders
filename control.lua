@@ -221,11 +221,11 @@ local function on_script_path_request_finished(event)
   local path_request_id = event.id
   local path = event.path
   if not global.spider_path_requests[path_request_id] then return end
-  local spider = global.spider_path_requests[path_request_id].spider --[[@type LuaEntity]]
-  local entity = global.spider_path_requests[path_request_id].entity --[[@type LuaEntity]]
-  local player = global.spider_path_requests[path_request_id].player --[[@type LuaPlayer]]
-  local spider_id = global.spider_path_requests[path_request_id].spider_id --[[@type string|integer]]
-  local entity_id = global.spider_path_requests[path_request_id].entity_id --[[@type string|integer]]
+  local spider = global.spider_path_requests[path_request_id].spider
+  local entity = global.spider_path_requests[path_request_id].entity
+  local player = global.spider_path_requests[path_request_id].player
+  local spider_id = global.spider_path_requests[path_request_id].spider_id
+  local entity_id = global.spider_path_requests[path_request_id].entity_id
   local character = player.character
   if (spider and spider.valid and entity and entity.valid and character and character.valid) then
     if path then
