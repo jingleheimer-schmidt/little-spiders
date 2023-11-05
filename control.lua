@@ -98,6 +98,9 @@ local function on_spider_reached_entity(event)
     if not (character and character.valid and entity and entity.valid) then
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
+      table.insert(global.available_spiders[player.index], spider)
+      spider.color = player.color
+      spider.follow_target = character and character.valid and character or nil
       return
     end
 
@@ -106,6 +109,9 @@ local function on_spider_reached_entity(event)
     if not (inventory and inventory.valid) then
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
+      table.insert(global.available_spiders[player.index], spider)
+      spider.color = player.color
+      spider.follow_target = character
       return
     end
 
