@@ -5,6 +5,7 @@ local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
 local randomize_table = general_util.randomize_table
 local random_pairs = general_util.random_pairs
+local shuffle_array = general_util.shuffle_array
 
 local color_util = require("util/colors")
 local color = color_util.color
@@ -16,6 +17,7 @@ local math_util = require("util/math")
 local maximum_length = math_util.maximum_length
 local minimum_length = math_util.minimum_length
 local rotate_around_target = math_util.rotate_around_target
+local random_position_on_circumference = math_util.random_position_on_circumference
 
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
@@ -25,6 +27,7 @@ local function on_init()
     by_spider = {}, --[[@type table<uuid, task_data>]]
   }
   global.spider_path_requests = {} --[[@type table<integer, path_request_data>]]
+  global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
 end
 script.on_init(on_init)
 
@@ -86,6 +89,9 @@ local function on_spider_reached_entity(event)
   if #destinations == 0 then
     local spider_id = entity_uuid(spider)
     local task_data = global.tasks.by_spider[spider_id]
+    if not task_data then
+      return
+    end
     local entity = task_data.entity
     local entity_id = task_data.entity_id
     local player = task_data.player
@@ -116,14 +122,29 @@ local function on_spider_reached_entity(event)
 
     if task_type == "deconstruct" then
       local entity_position = entity.position
-      while entity.valid do
-        local result = entity.mine { inventory = inventory, force = true, ignore_minable = false, raise_destroyed = true }
+      if entity.to_be_deconstructed() then
+        local prototype = entity.prototype
+        local products = prototype and prototype.mineable_properties.products
+        local result_when_mined = (entity.type == "item-entity" and entity.stack) or (products and products[1] and products[1].name) or nil
+        local space_in_stack = result_when_mined and inventory.can_insert(result_when_mined)
+        if result_when_mined and space_in_stack then
+          while entity.valid do
+            local count = 0
+            if inventory.can_insert(result_when_mined) then
+              local result = entity.mine { inventory = inventory, force = false, ignore_minable = false, raise_destroyed = true }
+              count = count + 1
+              if not result then break end
+            else break
+            end
+            if count > 4 then break end
+          end
+          local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+          global.tasks.by_entity[entity_id].render_ids[render_id] = false
+          global.tasks.by_spider[spider_id].render_ids[render_id] = false
+          global.tasks.by_entity[entity_id].status = "completed"
+          global.tasks.by_spider[spider_id].status = "completed"
+        end
       end
-      local render_id = draw_line(spider.surface, character, spider, player.color, 20)
-      global.tasks.by_entity[entity_id].render_ids[render_id] = true
-      global.tasks.by_spider[spider_id].render_ids[render_id] = true
-      global.tasks.by_entity[entity_id].status = "completed"
-      global.tasks.by_spider[spider_id].status = "completed"
 
     elseif task_type == "revive" then
       local items = entity.ghost_prototype.items_to_place_this
@@ -136,14 +157,14 @@ local function on_spider_reached_entity(event)
           if revived_entity then
             inventory.remove(item_stack)
             local render_id = draw_line(spider.surface, character, spider, player.color, 20)
-            global.tasks.by_entity[entity_id].render_ids[render_id] = true
-            global.tasks.by_spider[spider_id].render_ids[render_id] = true
+            global.tasks.by_entity[entity_id].render_ids[render_id] = false
+            global.tasks.by_spider[spider_id].render_ids[render_id] = false
             global.tasks.by_entity[entity_id].status = "completed"
             global.tasks.by_spider[spider_id].status = "completed"
           else
             local ghost_position = entity.position
             local spider_position = spider.position
-            local distance = maximum_length(entity.bounding_box) + 1
+            local distance = maximum_length(entity.bounding_box)
             for i = 1, 45, 5 do
               local rotatated_position = rotate_around_target(ghost_position, spider_position, i, distance)
               spider.add_autopilot_destination(rotatated_position)
@@ -152,57 +173,58 @@ local function on_spider_reached_entity(event)
           end
         end
       end
-      for render_id, bool in pairs(global.tasks.by_entity[entity_id].render_ids) do
-        rendering.destroy(render_id)
-      end
 
     elseif task_type == "upgrade" then
-      local upgrade_target = entity.get_upgrade_target()
-      local items = upgrade_target and upgrade_target.items_to_place_this
-      local item_stack = items and items[1]
-      if upgrade_target and item_stack then
-        local item_name = item_stack.name
-        local item_count = item_stack.count or 1
-        if inventory.get_item_count(item_name) >= item_count then
-          local entity_type = entity.type
-          ---@diagnostic disable:missing-fields
-          local upgraded_entity = entity.surface.create_entity {
-            name = upgrade_target.name,
-            position = entity.position,
-            direction = entity.get_upgrade_direction(),
-            player = player,
-            fast_replace = true,
-            force = entity.force,
-            spill = true,
-            type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or
-            ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
-            raise_built = true,
-          }
-          ---@diagnostic enable:missing-fields
-          if upgraded_entity then
-            inventory.remove(item_stack)
-            local render_id = draw_line(spider.surface, character, spider, player.color, 20)
-            global.tasks.by_entity[entity_id].render_ids[render_id] = true
-            global.tasks.by_spider[spider_id].render_ids[render_id] = true
-            global.tasks.by_entity[entity_id].status = "completed"
-            global.tasks.by_spider[spider_id].status = "completed"
-          else
-            local upgrade_position = entity.position
-            local spider_position = spider.position
-            local distance = maximum_length(entity.bounding_box) + 1
-            for i = 1, 45, 5 do
-              local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, distance)
-              spider.add_autopilot_destination(rotatated_position)
+      if entity.to_be_upgraded() then
+        local upgrade_target = entity.get_upgrade_target()
+        local items = upgrade_target and upgrade_target.items_to_place_this
+        local item_stack = items and items[1]
+        if upgrade_target and item_stack then
+          local item_name = item_stack.name
+          local item_count = item_stack.count or 1
+          if inventory.get_item_count(item_name) >= item_count then
+            local entity_type = entity.type
+            ---@diagnostic disable:missing-fields
+            local upgraded_entity = entity.surface.create_entity {
+              name = upgrade_target.name,
+              position = entity.position,
+              direction = entity.get_upgrade_direction(),
+              player = player,
+              fast_replace = true,
+              force = entity.force,
+              spill = true,
+              type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or
+              ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
+              raise_built = true,
+            }
+            ---@diagnostic enable:missing-fields
+            if upgraded_entity then
+              inventory.remove(item_stack)
+              local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+              global.tasks.by_entity[entity_id].render_ids[render_id] = false
+              global.tasks.by_spider[spider_id].render_ids[render_id] = false
+              global.tasks.by_entity[entity_id].status = "completed"
+              global.tasks.by_spider[spider_id].status = "completed"
+            else
+              local upgrade_position = entity.position
+              local spider_position = spider.position
+              local distance = maximum_length(entity.bounding_box) + 1
+              for i = 1, 45, 5 do
+                local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, distance)
+                spider.add_autopilot_destination(rotatated_position)
+              end
+              retry_task = true
             end
-            retry_task = true
           end
         end
       end
-      for render_id, bool in pairs(global.tasks.by_entity[entity_id].render_ids) do
-        rendering.destroy(render_id)
-      end
     end
     if not retry_task then
+      for render_id, bool in pairs(global.tasks.by_entity[entity_id].render_ids) do
+        if bool then
+          rendering.destroy(render_id)
+        end
+      end
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
       table.insert(global.available_spiders[player.index], spider)
@@ -242,6 +264,9 @@ local function on_script_path_request_finished(event)
       global.tasks.by_spider[spider_id].render_ids[render_id] = true
 
     else
+      if math.random() < 0.125 then
+        spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
+      end
       table.insert(global.available_spiders[player.index], spider)
       spider.color = player.color
       local render_id = draw_line(spider.surface, spider, entity, color.white, 10)
@@ -256,19 +281,20 @@ end
 
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
+---@param spider_id string|integer
 ---@param spider LuaEntity
 ---@param entity_id string|integer
 ---@param entity LuaEntity
 ---@param player LuaPlayer
-local function request_spider_path(spider, entity_id, entity, player)
+local function request_spider_path(spider_id, spider, entity_id, entity, player)
   local surface = spider.surface
   local request_parameters = {
     bounding_box = spider.bounding_box,
-    collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask,
+    collision_mask = global.spider_leg_collision_mask,
     start = spider.position,
     goal = entity.position,
     force = spider.force,
-    radius = maximum_length(spider.bounding_box) + 1,
+    radius = maximum_length(entity.bounding_box) + 1,
     can_open_gates = true,
     path_resolution_modifier = 1,
     pathfind_flags = {
@@ -279,7 +305,7 @@ local function request_spider_path(spider, entity_id, entity, player)
   local path_request_id = surface.request_path(request_parameters)
   global.spider_path_requests[path_request_id] = {
     spider = spider,
-    spider_id = entity_uuid(spider),
+    spider_id = spider_id,
     entity = entity,
     entity_id = entity_id,
     player = player
@@ -292,9 +318,9 @@ end
 ---@param spider LuaEntity
 ---@param player LuaPlayer
 local function assign_new_task(type, entity_id, entity, spider, player)
-  request_spider_path(spider, entity_id, entity, player)
-  spider.color = color.white
   local spider_id = entity_uuid(spider)
+  spider.color = color.white
+  request_spider_path(spider_id, spider, entity_id, entity, player)
   local task_data = {
     entity = entity,
     entity_id = entity_id,
@@ -329,22 +355,37 @@ local function on_tick(event)
       area = area,
       to_be_deconstructed = true,
     })
+    -- shuffle_array(to_be_deconstructed)
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
 
     while #global.available_spiders[player_index] > 0 do
       if not upgrade_ordered then
-        for _, decon_entity in random_pairs(to_be_deconstructed) do
-          local entity_id = entity_uuid(decon_entity)
-          if not global.tasks.by_entity[entity_id] then
-            if inventory and inventory.count_empty_stacks() > 0 then
-              local spider = table.remove(global.available_spiders[player_index])
-              if spider then
-                assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
-                decon_ordered = true
+        -- for _, decon_entity in random_pairs(to_be_deconstructed) do
+        local entity_count = #to_be_deconstructed
+        for i = 1, entity_count do
+          local index = math.random(1, entity_count)
+          local decon_entity = to_be_deconstructed[index]
+          if decon_entity then
+            if #global.available_spiders[player_index] == 0 then break end
+            local entity_id = entity_uuid(decon_entity)
+            if not global.tasks.by_entity[entity_id] then
+              -- local space_in_inventory = inventory and inventory.count_empty_stacks() > 0
+              local prototype = decon_entity.prototype
+              local products = prototype and prototype.mineable_properties.products
+              local result_when_mined = (decon_entity.type == "item-entity" and decon_entity.stack) or (products and products[1] and products[1].name) or nil
+              local space_in_stack = result_when_mined and inventory and inventory.can_insert(result_when_mined)
+              if space_in_stack then
+                local spider = table.remove(global.available_spiders[player_index])
+                if spider then
+                  assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
+                  decon_ordered = true
+                end
+              else break
               end
             end
+            to_be_deconstructed[index] = nil
           end
         end
       end
@@ -354,22 +395,29 @@ local function on_tick(event)
           area = area,
           type = "entity-ghost",
         })
-        for _, revive_entity in random_pairs(to_be_revived) do
-          local entity_id = entity_uuid(revive_entity)
-          if not global.tasks.by_entity[entity_id] then
-            local items = revive_entity.ghost_prototype.items_to_place_this
-            local item_stack = items and items[1]
-            if item_stack then
-              local item_name = item_stack.name
-              local item_count = item_stack.count or 1
-              if inventory and inventory.get_item_count(item_name) >= item_count then
-                local spider = table.remove(global.available_spiders[player_index])
-                if spider then
-                  assign_new_task("revive", entity_id, revive_entity, spider, player)
-                  revive_ordered = true
+        local entity_count = #to_be_revived
+        for i = 1, entity_count do
+          local index = math.random(1, entity_count)
+          local revive_entity = to_be_revived[index]
+          if revive_entity then
+            if #global.available_spiders[player_index] == 0 then break end
+            local entity_id = entity_uuid(revive_entity)
+            if not global.tasks.by_entity[entity_id] then
+              local items = revive_entity.ghost_prototype.items_to_place_this
+              local item_stack = items and items[1]
+              if item_stack then
+                local item_name = item_stack.name
+                local item_count = item_stack.count or 1
+                if inventory and inventory.get_item_count(item_name) >= item_count then
+                  local spider = table.remove(global.available_spiders[player_index])
+                  if spider then
+                    assign_new_task("revive", entity_id, revive_entity, spider, player)
+                    revive_ordered = true
+                  end
                 end
               end
             end
+            to_be_revived[index] = nil
           end
         end
       end
@@ -379,23 +427,30 @@ local function on_tick(event)
           area = area,
           to_be_upgraded = true,
         })
-        for _, upgrade_entity in random_pairs(to_be_upgraded) do
-          local entity_id = entity_uuid(upgrade_entity)
-          if not global.tasks.by_entity[entity_id] then
-            local upgrade_target = upgrade_entity.get_upgrade_target()
-            local items = upgrade_target and upgrade_target.items_to_place_this
-            local item_stack = items and items[1]
-            if upgrade_target and item_stack then
-              local item_name = item_stack.name
-              local item_count = item_stack.count or 1
-              if inventory and inventory.get_item_count(item_name) >= item_count then
-                local spider = table.remove(global.available_spiders[player_index])
-                if spider then
-                  assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
-                  upgrade_ordered = true
+        local entity_count = #to_be_upgraded
+        for i = 1, entity_count do
+          local index = math.random(1, entity_count)
+          local upgrade_entity = to_be_upgraded[index]
+          if upgrade_entity then
+            if #global.available_spiders[player_index] == 0 then break end
+            local entity_id = entity_uuid(upgrade_entity)
+            if not global.tasks.by_entity[entity_id] then
+              local upgrade_target = upgrade_entity.get_upgrade_target()
+              local items = upgrade_target and upgrade_target.items_to_place_this
+              local item_stack = items and items[1]
+              if upgrade_target and item_stack then
+                local item_name = item_stack.name
+                local item_count = item_stack.count or 1
+                if inventory and inventory.get_item_count(item_name) >= item_count then
+                  local spider = table.remove(global.available_spiders[player_index])
+                  if spider then
+                    assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
+                    upgrade_ordered = true
+                  end
                 end
               end
             end
+            to_be_upgraded[index] = nil
           end
         end
       end
