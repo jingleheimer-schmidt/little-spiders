@@ -288,7 +288,7 @@ local function request_spider_path(spider, entity_id, entity, player)
 end
 
 ---@param type string
----@param entity_id string
+---@param entity_id string|integer
 ---@param entity LuaEntity
 ---@param spider LuaEntity
 ---@param player LuaPlayer
