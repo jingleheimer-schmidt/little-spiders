@@ -4,10 +4,20 @@
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
 
+local color_util = require("util/colors")
+local color = color_util.color
+
+local rendering_util = require("util/rendering")
+local draw_line = rendering_util.draw_line
+
 local function on_init()
-  global.spiders = {}
-  global.available_spiders = {}
-  global.tasks = {}
+  global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
+  global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity>>]]
+  global.tasks = {
+    by_entity = {}, --[[@type table<uuid, task_data>]]
+    by_spider = {}, --[[@type table<uuid, task_data>]]
+  }
+  global.spider_path_requests = {} --[[@type table<integer, path_request_data>]]
 end
 script.on_init(on_init)
 
@@ -20,7 +30,7 @@ local function on_spider_created(event)
   local character = player and player.character
 
   if player and character then
-    spider.color = character.color
+    spider.color = player.color
     spider.follow_target = character
     local uuid = entity_uuid(spider)
     global.spiders[player_index] = global.spiders[player_index] or {}
@@ -31,206 +41,143 @@ local function on_spider_created(event)
 
 end
 
-local filter = { filter = "name", name = "little-spidertron" }
+local filter = {{ filter = "name", name = "little-spidertron" }}
 script.on_event(defines.events.on_built_entity, on_spider_created, filter)
-
----@param event EventData.on_script_path_request_finished
-local function on_script_path_request_finished(event)
-  local path_request_id = event.id
-  local path = event.path
-  global.spider_path_requests = global.spider_path_requests or {}
-  if not global.spider_path_requests[path_request_id] then return end
-  local spider = global.spider_path_requests[path_request_id].spider --[[@type LuaEntity]]
-  local entity = global.spider_path_requests[path_request_id].entity --[[@type LuaEntity]]
-  local player = global.spider_path_requests[path_request_id].player --[[@type LuaPlayer]]
-  local character = player.character
-  if (spider and spider.valid and entity and entity.valid and character and character.valid) then
-    local character_inventory = character.get_main_inventory()
-    if character_inventory then
-      local entity_id = entity_uuid(entity)
-      if entity.type == "entity-ghost" then
-        if character_inventory.get_item_count(entity.ghost_name) > 0 then
-          spider.color = { r = 0, g = 0, b = 1, a = 0.5}
-          global.ghosts_to_build = global.ghosts_to_build or {}
-          global.ghosts_to_build[spider.unit_number] = {entity = entity, uuid = entity_id}
-        end
-      elseif entity.to_be_deconstructed() then
-        spider.color = { r = 1, g = 0, b = 0, a = 0.5 }
-        global.entities_to_deconstruct = global.entities_to_deconstruct or {}
-        global.entities_to_deconstruct[spider.unit_number] = {entity = entity, uuid = entity_id}
-      elseif entity.to_be_upgraded() then
-        spider.color = { r = 0, g = 1, b = 0, a = 0.5 }
-        global.entities_to_upgrade = global.entities_to_upgrade or {}
-        global.entities_to_upgrade[spider.unit_number] = {entity = entity, uuid = entity_id}
-      end
-    end
-    if path then
-      for _, waypoint in pairs(path) do
-        spider.add_autopilot_destination(waypoint.position)
-      end
-    else
-      table.insert(global.available_spiders[spider.last_user.index], spider)
-      spider.color = player.chat_color
-    end
-  end
-  local entity_id = entity_uuid(entity)
-  global.spider_on_the_way = global.spider_on_the_way or {}
-  global.spider_on_the_way[entity_id] = true
-  global.spider_path_requested = global.spider_path_requested or {}
-  global.spider_path_requested[entity_id] = nil
-  global.spider_path_requests[path_request_id] = nil
-end
-
-script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
   if not spider.name == "little-spidertron" then return end
-  if spider.autopilot_destination and not spider.autopilot_destinations[1] then
+  local destinations = spider.autopilot_destinations
+  if #destinations == 0 then
 
-    global.ghosts_to_build = global.ghosts_to_build or {}
-    local ghost_data = global.ghosts_to_build[spider.unit_number]
-    local ghost = ghost_data and ghost_data.entity --[[@type LuaEntity]]
-    local ghost_id = ghost_data and ghost_data.uuid
-    if ghost and ghost.valid then
-      local character_inventory = spider.last_user.character.get_inventory(defines.inventory.character_main)
-      if character_inventory and character_inventory.get_item_count(ghost.ghost_name) > 0 then
-        rendering.draw_line{
-          color = spider.color,
-          width = 2,
-          from = spider,
-          to = ghost.position,
-          surface = spider.surface,
-          time_to_live = 10,
-          draw_on_ground = true,
-        }
-        rendering.draw_line{
-          color = spider.last_user.chat_color,
-          width = 2,
-          from = spider,
-          to = spider.last_user.character,
-          surface = spider.surface,
-          time_to_live = 10,
-          draw_on_ground = true,
-        }
-        local ghost_name = ghost.ghost_name
-        local dictionary, revived_entity = ghost.revive({false, true})
-        if revived_entity then
-          character_inventory.remove{name = ghost_name, count = 1}
+    local spider_id = entity_uuid(spider)
+    local task_data = global.tasks.by_spider[spider_id]
+    local entity = task_data.entity
+    local entity_id = task_data.entity_id
+    local player = task_data.player
+    local task_type = task_data.task_type
+    local character = player and player.valid and player.character
+
+    if not (character and character.valid and entity and entity.valid) then
+      global.tasks.by_entity[entity_id] = nil
+      global.tasks.by_spider[spider_id] = nil
+      return
+    end
+
+    local inventory = character.get_inventory(defines.inventory.character_main)
+
+    if not (inventory and inventory.valid) then
+      global.tasks.by_entity[entity_id] = nil
+      global.tasks.by_spider[spider_id] = nil
+      return
+    end
+
+    if task_type == "deconstruct" then
+      local entity_position = entity.position
+      while entity.valid do
+        local result = entity.mine{inventory = inventory, force = true, ignore_minable = false, raise_destroyed = true}
+      end
+      draw_line(spider.surface, character, spider, player.color, 20)
+      -- draw_line(spider.surface, spider, entity_position, color.red)
+
+    elseif task_type == "revive" then
+      local items = entity.ghost_prototype.items_to_place_this
+      local item_stack = items and items[1]
+      if item_stack then
+        local item_name = item_stack.name
+        local item_count = item_stack.count or 1
+        if inventory.get_item_count(item_name) >= item_count then
+          local dictionary, revived_entity = entity.revive({false, true})
+          if revived_entity then
+            inventory.remove(item_stack)
+            draw_line(spider.surface, character, spider, player.color, 20)
+            -- draw_line(spider.surface, spider, revived_entity, color.blue)
+          end
         end
       end
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[ghost_id] = nil
-      spider.color = spider.last_user.chat_color
-    else
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[ghost_id] = nil
-      spider.color = spider.last_user.chat_color
-    end
 
-    global.entities_to_deconstruct = global.entities_to_deconstruct or {}
-    local decon_data = global.entities_to_deconstruct[spider.unit_number]
-    local decon_entity = decon_data and decon_data.entity --[[@type LuaEntity]]
-    local decon_id = decon_data and decon_data.uuid
-    if decon_entity and decon_entity.valid then
-      -- local entity_id = entity_uuid(decon_entity)
-      rendering.draw_line{
-        color = spider.color,
-        width = 2,
-        from = spider,
-        to = decon_entity.position,
-        surface = spider.surface,
-        time_to_live = 10,
-        draw_on_ground = true,
-      }
-      rendering.draw_line{
-        color = spider.last_user.chat_color,
-        width = 2,
-        from = spider,
-        to = spider.last_user.character,
-        surface = spider.surface,
-        time_to_live = 10,
-        draw_on_ground = true,
-      }
-      local character_inventory = spider.last_user.character.get_inventory(defines.inventory.character_main)
-      while decon_entity.valid do
-        local result = decon_entity.mine{inventory = character_inventory, force = true, ignore_minable = false, raise_destroyed = true}
-      end
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[decon_id] = nil
-      spider.color = spider.last_user.chat_color
-    else
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[decon_id] = nil
-      spider.color = spider.last_user.chat_color
-    end
-
-    global.entities_to_upgrade = global.entities_to_upgrade or {}
-    local upgrade_data = global.entities_to_upgrade[spider.unit_number]
-    local upgrade_entity = upgrade_data and upgrade_data.entity --[[@type LuaEntity]]
-    local upgrade_id = upgrade_data and upgrade_data.uuid
-    if upgrade_entity and upgrade_entity.valid then
-      local character_inventory = spider.last_user.character.get_inventory(defines.inventory.character_main)
-      local upgrade_target = upgrade_entity.get_upgrade_target()
-      local upgrade_name = upgrade_target and upgrade_target.items_to_place_this and upgrade_target.items_to_place_this[1].name
-      if character_inventory and character_inventory.get_item_count(upgrade_name) > 0 then
-        rendering.draw_line{
-          color = spider.color,
-          width = 2,
-          from = spider,
-          to = upgrade_entity.position,
-          surface = spider.surface,
-          time_to_live = 10,
-          draw_on_ground = true,
-        }
-        rendering.draw_line{
-          color = spider.last_user.chat_color,
-          width = 2,
-          from = spider,
-          to = spider.last_user.character,
-          surface = spider.surface,
-          time_to_live = 10,
-          draw_on_ground = true,
-        }
-        local entity_type = upgrade_entity.type
-        local upgraded_entity = upgrade_name and upgrade_entity.surface.create_entity {
-          name = upgrade_name,
-          position = upgrade_entity.position,
-          direction = upgrade_entity.get_upgrade_direction(),
-          fast_replace = true,
-          force = upgrade_entity.force,
-          spill = false,
-          type = (entity_type == "underground-belt" and upgrade_entity.belt_to_ground_type) or ((entity_type == "loader" or entity_type == "loader-1x1") and upgrade_entity.loader_type),
-          raise_built = true,
-        }
-        if upgraded_entity then
-          character_inventory.remove{name = upgrade_name, count = 1}
+    elseif task_type == "upgrade" then
+      local upgrade_target = entity.get_upgrade_target()
+      local items = upgrade_target and upgrade_target.items_to_place_this
+      local item_stack = items and items[1]
+      if upgrade_target and item_stack then
+        local item_name = item_stack.name
+        local item_count = item_stack.count or 1
+        if inventory.get_item_count(item_name) >= item_count then
+          local entity_type = entity.type
+          ---@diagnostic disable:missing-fields
+          local upgraded_entity = entity.surface.create_entity {
+            name = upgrade_target.name,
+            position = entity.position,
+            direction = entity.get_upgrade_direction(),
+            fast_replace = true,
+            force = entity.force,
+            spill = true,
+            type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
+            raise_built = true,
+          }
+          ---@diagnostic enable:missing-fields
+          if upgraded_entity then
+            inventory.remove(item_stack)
+            draw_line(spider.surface, character, spider, player.color, 20)
+            -- draw_line(spider.surface, spider, upgraded_entity, color.green)
+          end
         end
       end
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[upgrade_id] = nil
-      spider.color = spider.last_user.chat_color
-    else
-      global.spider_on_the_way = global.spider_on_the_way or {}
-      global.spider_on_the_way[upgrade_id] = nil
-      spider.color = spider.last_user.chat_color
     end
 
-    global.ghosts_to_build[spider.unit_number] = nil
-    global.entities_to_deconstruct[spider.unit_number] = nil
-    global.entities_to_upgrade[spider.unit_number] = nil
-    global.available_spiders = global.available_spiders or {}
-    table.insert(global.available_spiders[spider.last_user.index], spider)
+    global.tasks.by_entity[entity_id] = nil
+    global.tasks.by_spider[spider_id] = nil
+    table.insert(global.available_spiders[player.index], spider)
+    spider.color = player.color
+    spider.follow_target = character
+
   end
 end
 
 script.on_event(defines.events.on_spider_command_completed, on_spider_reached_entity)
 
+---@param event EventData.on_script_path_request_finished
+local function on_script_path_request_finished(event)
+  local path_request_id = event.id
+  local path = event.path
+  if not global.spider_path_requests[path_request_id] then return end
+  local spider = global.spider_path_requests[path_request_id].spider --[[@type LuaEntity]]
+  local entity = global.spider_path_requests[path_request_id].entity --[[@type LuaEntity]]
+  local player = global.spider_path_requests[path_request_id].player --[[@type LuaPlayer]]
+  local spider_id = global.spider_path_requests[path_request_id].spider_id --[[@type string|integer]]
+  local entity_id = global.spider_path_requests[path_request_id].entity_id --[[@type string|integer]]
+  local character = player.character
+  if (spider and spider.valid and entity and entity.valid and character and character.valid) then
+    if path then
+      spider.autopilot_destination = nil
+      for _, waypoint in pairs(path) do
+        spider.add_autopilot_destination(waypoint.position)
+      end
+      global.tasks.by_entity[entity_id].status = "on_the_way"
+      global.tasks.by_spider[spider_id].status = "on_the_way"
+      local task_type = global.tasks.by_entity[entity_id].task_type
+      local task_color = task_type == "deconstruct" and color.red or task_type == "revive" and color.blue or task_type == "upgrade" and color.green
+      spider.color = task_color or color.black
+      draw_line(spider.surface, entity, spider, task_color or color.white)
+    else
+      table.insert(global.available_spiders[player.index], spider)
+      spider.color = player.color
+      global.tasks.by_entity[entity_id] = nil
+      global.tasks.by_spider[spider_id] = nil
+    end
+  end
+  global.spider_path_requests[path_request_id] = nil
+end
+
+script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
+
 ---@param spider LuaEntity
+---@param entity_id string|integer
 ---@param entity LuaEntity
 ---@param player LuaPlayer
-local function request_spider_path(spider, entity, player)
+local function request_spider_path(spider, entity_id, entity, player)
   local surface = spider.surface
   local request_parameters = {
     bounding_box = spider.bounding_box,
@@ -241,103 +188,136 @@ local function request_spider_path(spider, entity, player)
     radius = 5,
     can_open_gates = true,
     path_resolution_modifier = 1,
+    pathfind_flags = {
+      cache = false,
+      low_priority = true,
+    },
   }
   local path_request_id = surface.request_path(request_parameters)
-  spider.color = { r = 1, g = 1, b = 1, a = 0.5 }
-  global.spider_path_requests = global.spider_path_requests or {}
-  global.spider_path_requests[path_request_id] = {spider = spider, entity = entity, player = player}
+  global.spider_path_requests[path_request_id] = {
+    spider = spider,
+    spider_id = entity_uuid(spider),
+    entity = entity,
+    entity_id = entity_id,
+    player = player
+  }
+end
+
+---@param type string
+---@param entity_id string
+---@param entity LuaEntity
+---@param spider LuaEntity
+---@param player LuaPlayer
+local function assign_new_task(type, entity_id, entity, spider, player)
+  request_spider_path(spider, entity_id, entity, player)
+  spider.color = color.white
+  local spider_id = entity_uuid(spider)
+  local task_data = {
+    entity = entity,
+    entity_id = entity_id,
+    spider = spider,
+    spider_id = spider_id,
+    task_type = type,
+    player = player,
+    status = "path_requested",
+  }
+  global.tasks.by_entity[entity_id] = task_data
+  global.tasks.by_spider[spider_id] = task_data
 end
 
 ---@param event EventData.on_tick
 local function on_tick(event)
-  local tick = event.tick
   for _, player in pairs(game.connected_players) do
     local character = player.character
-    if character then
-      local nearby_deconstructions = character.surface.find_entities_filtered{
-        area = {{character.position.x - 20, character.position.y - 20}, {character.position.x + 20, character.position.y + 20}},
-        to_be_deconstructed = true,
-      }
-      local decon_ordered = false
-      local revive_ordered = false
-      local upgrade_ordered = false
-      for _, decon_entity in pairs(nearby_deconstructions) do
-        local decon_id = entity_uuid(decon_entity)
-        -- if not decon_id then decon_id = decon_entity.position.x * 100000000 + decon_entity.position.y end
-        global.spider_path_requested = global.spider_path_requested or {}
-        global.spider_on_the_way = global.spider_on_the_way or {}
-        if not (global.spider_on_the_way[decon_id] or global.spider_path_requested[decon_id]) then
-          global.available_spiders = global.available_spiders or {}
-          local available_spiders = global.available_spiders[player.index]
-          local spider = table.remove(available_spiders) --[[@type LuaEntity?]]
-          if spider and spider.valid then
-            request_spider_path(spider, decon_entity, player)
-            global.spider_path_requested[decon_id] = true
-            -- spider.color = { r = 1, g = 1, b = 1, a = 0.5 }
-            decon_ordered = true
-            break
-          end
-        end
+    if not character then goto next_player end
+    local player_index = player.index
+    local surface = character.surface
+    local inventory = character.get_inventory(defines.inventory.character_main)
+    local character_position_x = character.position.x
+    local character_position_y = character.position.y
+    local nearby_entities = character.surface.find_entities({
+      {character_position_x - 20, character_position_y - 20},
+      {character_position_x + 20, character_position_y + 20},
+    })
+    -- local nearby_entities = surface.find_entities_filtered({
+    --   area = {
+    --     {character_position_x - 20, character_position_y - 20},
+    --     {character_position_x + 20, character_position_y + 20},
+    --   },
+    --   force = player.force,
+    --   limit = #global.available_spiders[player_index] + 1,
+    -- })
+    local to_be_deconstructed = {}
+    local to_be_upgraded = {}
+    local to_be_revived = {}
+    for _, entity in pairs(nearby_entities) do
+      local entity_id = entity_uuid(entity)
+      if entity.to_be_deconstructed() then
+        to_be_deconstructed[entity_id] = entity
+      elseif entity.to_be_upgraded() then
+        to_be_upgraded[entity_id] = entity
+      elseif entity.type == "entity-ghost" then
+        to_be_revived[entity_id] = entity
       end
-      if not decon_ordered then
-        local nearby_ghosts = character.surface.find_entities_filtered{
-          area = {{character.position.x - 20, character.position.y - 20}, {character.position.x + 20, character.position.y + 20}},
-          type = "entity-ghost",
-        }
-        for _, ghost in pairs(nearby_ghosts) do
-          local ghost_id = entity_uuid(ghost)
-          -- if not ghost_id then ghost_id = ghost.position.x * 100000000 + ghost.position.y end
-          global.spider_path_requested = global.spider_path_requested or {}
-          global.spider_on_the_way = global.spider_on_the_way or {}
-          if not (global.spider_on_the_way[ghost_id] or global.spider_path_requested[ghost_id]) then
-            local character_inventory = character.get_main_inventory()
-            if character_inventory and character_inventory.get_item_count(ghost.ghost_name) > 0 then
-              global.available_spiders = global.available_spiders or {}
-              local available_spiders = global.available_spiders[player.index]
-              local spider = table.remove(available_spiders) --[[@type LuaEntity?]]
-              if spider and spider.valid then
-                request_spider_path(spider, ghost, player)
-                global.spider_path_requested[ghost_id] = true
-                -- spider.color = { r = 1, g = 1, b = 1, a = 0.5 }
-                revive_ordered = true
-                break
-              end
+    end
+    local decon_ordered = false
+    local revive_ordered = false
+    local upgrade_ordered = false
+    if not decon_ordered then
+      for entity_id, decon_entity in pairs(to_be_deconstructed) do
+        if not global.tasks.by_entity[entity_id] then
+          if inventory and inventory.count_empty_stacks() > 0 then
+            local spider = table.remove(global.available_spiders[player_index])
+            if spider then
+              assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
+              decon_ordered = true
             end
           end
         end
-        if not revive_ordered then
-          local nearby_upgrades = character.surface.find_entities_filtered{
-            area = {{character.position.x - 20, character.position.y - 20}, {character.position.x + 20, character.position.y + 20}},
-            to_be_upgraded = true,
-          }
-          for _, upgrade_entity in pairs(nearby_upgrades) do
-            local upgrade_id = entity_uuid(upgrade_entity)
-            -- if not upgrade_id then upgrade_id = upgrade_entity.position.x * 100000000 + upgrade_entity.position.y end
-            global.spider_path_requested = global.spider_path_requested or {}
-            global.spider_on_the_way = global.spider_on_the_way or {}
-            if not (global.spider_on_the_way[upgrade_id] or global.spider_path_requested[upgrade_id]) then
-              local upgrade_target = upgrade_entity.get_upgrade_target()
-              local upgrade_name = upgrade_target and upgrade_target.items_to_place_this and upgrade_target.items_to_place_this[1].name
-              local character_inventory = character.get_main_inventory()
-              if character_inventory and character_inventory.get_item_count(upgrade_name) > 0 then
-                global.available_spiders = global.available_spiders or {}
-                local available_spiders = global.available_spiders[player.index]
-                local spider = table.remove(available_spiders) --[[@type LuaEntity?]]
-                if spider and spider.valid then
-                  request_spider_path(spider, upgrade_entity, player)
-                  global.spider_path_requested[upgrade_id] = true
-                  -- spider.color = { r = 1, g = 1, b = 1, a = 0.5 }
-                  upgrade_ordered = true
-                  break
-                end
+      end
+    end
+    if not decon_ordered then
+      for entity_id, revive_entity in pairs(to_be_revived) do
+        if not global.tasks.by_entity[entity_id] then
+          local items = revive_entity.ghost_prototype.items_to_place_this
+          local item_stack = items and items[1]
+          if item_stack then
+            local item_name = item_stack.name
+            local item_count = item_stack.count or 1
+            if inventory and inventory.get_item_count(item_name) >= item_count then
+              local spider = table.remove(global.available_spiders[player_index])
+              if spider then
+                assign_new_task("revive", entity_id, revive_entity, spider, player)
+                revive_ordered = true
               end
             end
           end
         end
       end
     end
+    if not revive_ordered then
+      for entity_id, upgrade_entity in pairs(to_be_upgraded) do
+        if not global.tasks.by_entity[entity_id] then
+          local upgrade_target = upgrade_entity.get_upgrade_target()
+          local items = upgrade_target and upgrade_target.items_to_place_this
+          local item_stack = items and items[1]
+          if upgrade_target and item_stack then
+            local item_name = item_stack.name
+            local item_count = item_stack.count or 1
+            if inventory and inventory.get_item_count(item_name) >= item_count then
+              local spider = table.remove(global.available_spiders[player_index])
+              if spider then
+                assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
+                upgrade_ordered = true
+              end
+            end
+          end
+        end
+      end
+    end
+    ::next_player::
   end
 end
 
 -- script.on_event(defines.events.on_tick, on_tick)
-script.on_nth_tick(5, on_tick)
+script.on_nth_tick(20, on_tick)
