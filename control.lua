@@ -173,6 +173,7 @@ local function on_spider_reached_entity(event)
             name = upgrade_target.name,
             position = entity.position,
             direction = entity.get_upgrade_direction(),
+            player = player,
             fast_replace = true,
             force = entity.force,
             spill = true,
