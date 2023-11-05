@@ -3,12 +3,19 @@
 
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
+local randomize_table = general_util.randomize_table
+local random_pairs = general_util.random_pairs
 
 local color_util = require("util/colors")
 local color = color_util.color
 
 local rendering_util = require("util/rendering")
 local draw_line = rendering_util.draw_line
+
+local math_util = require("util/math")
+local maximum_length = math_util.maximum_length
+local minimum_length = math_util.minimum_length
+local rotate_around_target = math_util.rotate_around_target
 
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
