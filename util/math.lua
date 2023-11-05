@@ -66,8 +66,16 @@ local function rotate_around_target(target_position, entity_position, degrees, m
     return new_entity_position
 end
 
+local function random_position_on_circumference(center, radius)
+    local angle = math.random() * 2 * math.pi
+    local x = center.x + radius * math.cos(angle)
+    local y = center.y + radius * math.sin(angle)
+    return {x = x, y = y}
+end
+
 return {
     maximum_length = maximum_length,
     minimum_length = minimum_length,
     rotate_around_target = rotate_around_target,
+    random_position_on_circumference = random_position_on_circumference,
 }
