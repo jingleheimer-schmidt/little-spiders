@@ -122,8 +122,9 @@ local function on_spider_reached_entity(event)
       while entity.valid do
         local result = entity.mine{inventory = inventory, force = true, ignore_minable = false, raise_destroyed = true}
       end
-      draw_line(spider.surface, character, spider, player.color, 20)
-      -- draw_line(spider.surface, spider, entity_position, color.red)
+      local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+      global.tasks.by_entity[entity_id].render_ids[render_id] = true
+      global.tasks.by_spider[spider_id].render_ids[render_id] = true
       global.tasks.by_entity[entity_id].status = "completed"
       global.tasks.by_spider[spider_id].status = "completed"
 
@@ -137,8 +138,9 @@ local function on_spider_reached_entity(event)
           local dictionary, revived_entity = entity.revive({false, true})
           if revived_entity then
             inventory.remove(item_stack)
-            draw_line(spider.surface, character, spider, player.color, 20)
-            -- draw_line(spider.surface, spider, revived_entity, color.blue)
+            local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+            global.tasks.by_entity[entity_id].render_ids[render_id] = true
+            global.tasks.by_spider[spider_id].render_ids[render_id] = true
             global.tasks.by_entity[entity_id].status = "completed"
             global.tasks.by_spider[spider_id].status = "completed"
           else
@@ -152,6 +154,9 @@ local function on_spider_reached_entity(event)
             retry_task = true
           end
         end
+      end
+      for render_id, bool in pairs(global.tasks.by_entity[entity_id].render_ids) do
+        rendering.destroy(render_id)
       end
 
     elseif task_type == "upgrade" then
@@ -177,8 +182,9 @@ local function on_spider_reached_entity(event)
           ---@diagnostic enable:missing-fields
           if upgraded_entity then
             inventory.remove(item_stack)
-            draw_line(spider.surface, character, spider, player.color, 20)
-            -- draw_line(spider.surface, spider, upgraded_entity, color.green)
+            local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+            global.tasks.by_entity[entity_id].render_ids[render_id] = true
+            global.tasks.by_spider[spider_id].render_ids[render_id] = true
             global.tasks.by_entity[entity_id].status = "completed"
             global.tasks.by_spider[spider_id].status = "completed"
           else
@@ -193,6 +199,10 @@ local function on_spider_reached_entity(event)
           end
         end
       end
+      for render_id, bool in pairs(global.tasks.by_entity[entity_id].render_ids) do
+        rendering.destroy(render_id)
+      end
+    end
     if not retry_task then
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
