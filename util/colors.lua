@@ -1,13 +1,13 @@
 
-local red = { r = 1, g = 0, b = 0 }
-local orange = { r = 1, g = 0.5, b = 0 }
-local yellow = { r = 1, g = 1, b = 0 }
-local green = { r = 0, g = 1, b = 0 }
-local blue = { r = 0, g = 0, b = 1 }
-local purple = { r = 0.5, g = 0, b = 1 }
-local pink = { r = 1, g = 0, b = 1 }
+local red = { r = 1, g = 0.5, b = 0.5 }
+local orange = { r = 1, g = 0.75, b = 0.5 }
+local yellow = { r = 1, g = 1, b = 0.5 }
+local green = { r = 0.5, g = 1, b = 0.5 }
+local blue = { r = 0.5, g = 0.5, b = 1 }
+local purple = { r = 0.75, g = 0.5, b = 1 }
+local pink = { r = 1, g = 0.5, b = 1 }
 local white = { r = 1, g = 1, b = 1 }
-local black = { r = 0, g = 0, b = 0 }
+local black = { r = 0.5, g = 0.5, b = 0.5 }
 
 return {
     color = {
