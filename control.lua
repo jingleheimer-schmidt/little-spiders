@@ -53,6 +53,33 @@ end
 local filter = {{ filter = "name", name = "little-spidertron" }}
 script.on_event(defines.events.on_built_entity, on_spider_created, filter)
 
+---@param event EventData.on_entity_destroyed
+local function on_spider_destroyed(event)
+  local unit_number = event.unit_number
+  if not unit_number then return end
+  for player_index, spiders in pairs(global.spiders) do
+    if spiders[unit_number] then
+      spiders[unit_number] = nil
+      break
+    end
+  end
+  for player_index, spiders in pairs(global.available_spiders) do
+    for i, spider in pairs(spiders) do
+      if not spider.valid then
+        table.remove(spiders, i)
+      end
+    end
+  end
+  local spider_task = global.tasks.by_spider[unit_number]
+  if spider_task then
+    local entity_id = spider_task.entity_id
+    global.tasks.by_entity[entity_id] = nil
+    global.tasks.by_spider[unit_number] = nil
+  end
+end
+
+script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
+
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
