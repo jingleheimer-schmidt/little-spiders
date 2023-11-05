@@ -14,6 +14,9 @@ little_spider_entity.trash_inventory_size = 0
 little_spider_entity.equipment_grid = nil
 little_spider_entity.allow_passengers = false
 little_spider_entity.is_military_target = false
+little_spider_entity.torso_rotation_speed = little_spider_entity.torso_rotation_speed * 2
+little_spider_entity.chunk_exploration_radius = 1
+little_spider_entity.minable.mining_time = little_spider_entity.minable.mining_time / 4
 local legs = little_spider_entity.spider_engine.legs
 if legs[1] then
     for _, leg in pairs(legs) do
