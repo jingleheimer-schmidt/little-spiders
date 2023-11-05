@@ -269,7 +269,7 @@ local function request_spider_path(spider, entity_id, entity, player)
     start = spider.position,
     goal = entity.position,
     force = spider.force,
-    radius = 5,
+    radius = maximum_length(spider.bounding_box) + 1,
     can_open_gates = true,
     path_resolution_modifier = 1,
     pathfind_flags = {
