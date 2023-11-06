@@ -325,8 +325,8 @@ script.on_event(defines.events.on_script_path_request_finished, on_script_path_r
 local function request_spider_path(spider_id, spider, entity_id, entity, player)
   local surface = spider.surface
   local request_parameters = {
-    bounding_box = spider.bounding_box,
-    collision_mask = global.spider_leg_collision_mask,
+    bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
+    collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" },
     start = spider.position,
     goal = entity.position,
     force = spider.force,
