@@ -81,6 +81,42 @@ end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 
+---@param player LuaPlayer
+local function relink_following_spiders(player)
+  local player_index = player.index
+  local character = player.character
+  local vehicle = player.vehicle
+  local spiders = global.spiders[player_index]
+  if not spiders then return end
+  for _, spider in pairs(spiders) do
+    if spider.valid then
+      if spider.surface_index == player.surface_index then
+        spider.follow_target = character or vehicle or nil
+      end
+    end
+  end
+end
+
+---@param event EventData.on_player_changed_surface
+local function on_player_changed_surface(event)
+  local player_index = event.player_index
+  local player = game.get_player(player_index)
+  if not player then return end
+  relink_following_spiders(player)
+end
+
+script.on_event(defines.events.on_player_changed_surface, on_player_changed_surface)
+
+---@param event EventData.on_player_driving_changed_state
+local function on_player_driving_changed_state(event)
+  local player_index = event.player_index
+  local player = game.get_player(player_index)
+  if not player then return end
+  relink_following_spiders(player)
+end
+
+script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
+
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
@@ -343,6 +379,11 @@ local function on_tick(event)
     if #global.available_spiders[player_index] == 0 then goto next_player end
     local character = player.character
     if not character then goto next_player end
+    global.previous_controller[player_index] = global.previous_controller[player_index] or player.controller_type
+    if global.previous_controller[player_index] ~= player.controller_type then
+      relink_following_spiders(player)
+      global.previous_controller[player_index] = player.controller_type
+    end
     local surface = character.surface
     local inventory = character.get_inventory(defines.inventory.character_main)
     local character_position_x = character.position.x
