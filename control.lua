@@ -133,25 +133,6 @@ end
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
--- ---@param event EventData.on_entity_color_changed
--- local function on_entity_color_changed(event)
---   local entity = event.entity
---   if (entity.type == "character") then
---     local player = entity.player
---     if not player then return end
---     local player_index = player.index
---     local spiders = global.spiders[player_index]
---     if not spiders then return end
---     for _, spider in pairs(spiders) do
---       if spider.valid then
---         spider.color = player.color
---       end
---     end
---   end
--- end
-
--- script.on_event(defines.events.on_entity_color_changed, on_entity_color_changed)
-
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
