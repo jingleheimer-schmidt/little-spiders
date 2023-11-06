@@ -317,13 +317,13 @@ end
 
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
+---@param surface LuaSurface
 ---@param spider_id string|integer
 ---@param spider LuaEntity
 ---@param entity_id string|integer
 ---@param entity LuaEntity
 ---@param player LuaPlayer
-local function request_spider_path(spider_id, spider, entity_id, entity, player)
-  local surface = spider.surface
+local function request_spider_path(surface, spider_id, spider, entity_id, entity, player)
   local request_parameters = {
     bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
     collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" },
@@ -353,10 +353,11 @@ end
 ---@param entity LuaEntity
 ---@param spider LuaEntity
 ---@param player LuaPlayer
-local function assign_new_task(type, entity_id, entity, spider, player)
+---@param surface LuaSurface
+local function assign_new_task(type, entity_id, entity, spider, player, surface)
   local spider_id = entity_uuid(spider)
   spider.color = color.white
-  request_spider_path(spider_id, spider, entity_id, entity, player)
+  request_spider_path(surface, spider_id, spider, entity_id, entity, player)
   local task_data = {
     entity = entity,
     entity_id = entity_id,
@@ -420,7 +421,7 @@ local function on_tick(event)
               if space_in_stack then
                 local spider = table.remove(global.available_spiders[player_index])
                 if spider then
-                  assign_new_task("deconstruct", entity_id, decon_entity, spider, player)
+                  assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
                   decon_ordered = true
                 end
               else break
@@ -452,7 +453,7 @@ local function on_tick(event)
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index])
                   if spider then
-                    assign_new_task("revive", entity_id, revive_entity, spider, player)
+                    assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
                     revive_ordered = true
                   end
                 end
@@ -485,7 +486,7 @@ local function on_tick(event)
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index])
                   if spider then
-                    assign_new_task("upgrade", entity_id, upgrade_entity, spider, player)
+                    assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                     upgrade_ordered = true
                   end
                 end
