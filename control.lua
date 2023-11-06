@@ -21,13 +21,15 @@ local random_position_on_circumference = math_util.random_position_on_circumfere
 
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
-  global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity>>]]
+  global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity[]>>]]
   global.tasks = {
     by_entity = {}, --[[@type table<uuid, task_data>]]
     by_spider = {}, --[[@type table<uuid, task_data>]]
   }
   global.spider_path_requests = {} --[[@type table<integer, path_request_data>]]
   global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
+  global.previous_controller = {} --[[@type table<integer, defines.controllers>]]
+  global.previous_color = {} --[[@type table<integer, Color>]]
 end
 script.on_init(on_init)
 
@@ -35,17 +37,23 @@ script.on_init(on_init)
 local function on_spider_created(event)
   local spider = event.created_entity
   local player_index = event.player_index
+  local surface_index = spider.surface_index
   local player = game.get_player(player_index)
-  local character = player and player.character
 
-  if player and character then
-    spider.color = player.color
-    spider.follow_target = character
-    local uuid = entity_uuid(spider)
-    global.spiders[player_index] = global.spiders[player_index] or {}
-    global.spiders[player_index][uuid] = spider
-    global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-    table.insert(global.available_spiders[player_index], spider)
+  if player then
+    local character = player.character
+    local vehicle = player.vehicle
+    local player_entity = character or vehicle or nil
+    if player_entity then
+      spider.color = player.color
+      spider.follow_target = player_entity
+      local uuid = entity_uuid(spider)
+      global.spiders[player_index] = global.spiders[player_index] or {}
+      global.spiders[player_index][uuid] = spider
+      global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+      global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+      table.insert(global.available_spiders[player_index][surface_index], spider)
+    end
   end
 
   script.register_on_entity_destroyed(spider)
@@ -64,10 +72,12 @@ local function on_spider_destroyed(event)
       break
     end
   end
-  for player_index, spiders in pairs(global.available_spiders) do
-    for i, spider in pairs(spiders) do
-      if not spider.valid then
-        table.remove(spiders, i)
+  for player_index, spider_data in pairs(global.available_spiders) do
+    for surface_index, spiders in pairs(spider_data) do
+      for i, spider in pairs(spiders) do
+        if not spider.valid then
+          table.remove(spiders, i)
+        end
       end
     end
   end
@@ -91,7 +101,13 @@ local function relink_following_spiders(player)
   for _, spider in pairs(spiders) do
     if spider.valid then
       if spider.surface_index == player.surface_index then
+        local destinations = spider.autopilot_destinations
         spider.follow_target = character or vehicle or nil
+        if destinations then
+          for _, destination in pairs(destinations) do
+            spider.add_autopilot_destination(destination)
+          end
+        end
       end
     end
   end
@@ -117,6 +133,25 @@ end
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
+-- ---@param event EventData.on_entity_color_changed
+-- local function on_entity_color_changed(event)
+--   local entity = event.entity
+--   if (entity.type == "character") then
+--     local player = entity.player
+--     if not player then return end
+--     local player_index = player.index
+--     local spiders = global.spiders[player_index]
+--     if not spiders then return end
+--     for _, spider in pairs(spiders) do
+--       if spider.valid then
+--         spider.color = player.color
+--       end
+--     end
+--   end
+-- end
+
+-- script.on_event(defines.events.on_entity_color_changed, on_entity_color_changed)
+
 ---@param event EventData.on_spider_command_completed
 local function on_spider_reached_entity(event)
   local spider = event.vehicle
@@ -132,25 +167,37 @@ local function on_spider_reached_entity(event)
     local entity_id = task_data.entity_id
     local player = task_data.player
     local task_type = task_data.task_type
-    local character = player and player.valid and player.character
 
-    if not (character and character.valid and entity and entity.valid) then
+    if not player.valid then return end
+    local character = player.character
+    local vehicle = player.vehicle
+    local player_entity = character or vehicle or nil
+
+    if not (player_entity and player_entity.valid and entity and entity.valid) then
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
-      table.insert(global.available_spiders[player.index], spider)
+      local player_index = player.index
+      local surface_index = player.surface_index
+      global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+      global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+      table.insert(global.available_spiders[player_index][surface_index], spider)
       spider.color = player.color
-      spider.follow_target = character and character.valid and character or nil
+      spider.follow_target = player_entity
       return
     end
 
-    local inventory = character.get_inventory(defines.inventory.character_main)
+    local inventory = player_entity.get_main_inventory()
 
     if not (inventory and inventory.valid) then
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
-      table.insert(global.available_spiders[player.index], spider)
+      local player_index = player.index
+      local surface_index = player.surface_index
+      global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+      global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+      table.insert(global.available_spiders[player_index][surface_index], spider)
       spider.color = player.color
-      spider.follow_target = character
+      spider.follow_target = player_entity
       return
     end
 
@@ -174,7 +221,7 @@ local function on_spider_reached_entity(event)
             end
             if count > 4 then break end
           end
-          local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+          local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
           global.tasks.by_entity[entity_id].render_ids[render_id] = false
           global.tasks.by_spider[spider_id].render_ids[render_id] = false
           global.tasks.by_entity[entity_id].status = "completed"
@@ -192,7 +239,7 @@ local function on_spider_reached_entity(event)
           local dictionary, revived_entity = entity.revive({ false, true })
           if revived_entity then
             inventory.remove(item_stack)
-            local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+            local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
             global.tasks.by_entity[entity_id].render_ids[render_id] = false
             global.tasks.by_spider[spider_id].render_ids[render_id] = false
             global.tasks.by_entity[entity_id].status = "completed"
@@ -236,7 +283,7 @@ local function on_spider_reached_entity(event)
             ---@diagnostic enable:missing-fields
             if upgraded_entity then
               inventory.remove(item_stack)
-              local render_id = draw_line(spider.surface, character, spider, player.color, 20)
+              local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
               global.tasks.by_entity[entity_id].render_ids[render_id] = false
               global.tasks.by_spider[spider_id].render_ids[render_id] = false
               global.tasks.by_entity[entity_id].status = "completed"
@@ -263,9 +310,13 @@ local function on_spider_reached_entity(event)
       end
       global.tasks.by_entity[entity_id] = nil
       global.tasks.by_spider[spider_id] = nil
-      table.insert(global.available_spiders[player.index], spider)
+      local player_index = player.index
+      local surface_index = player.surface_index
+      global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+      global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+      table.insert(global.available_spiders[player_index][surface_index], spider)
       spider.color = player.color
-      spider.follow_target = character
+      spider.follow_target = player_entity
     end
   end
 end
@@ -303,7 +354,11 @@ local function on_script_path_request_finished(event)
       if math.random() < 0.125 then
         spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
       end
-      table.insert(global.available_spiders[player.index], spider)
+      local player_index = player.index
+      local surface_index = player.surface_index
+      global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+      global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+      table.insert(global.available_spiders[player_index][surface_index], spider)
       spider.color = player.color
       local render_id = draw_line(spider.surface, spider, entity, color.white, 10)
       global.tasks.by_entity[entity_id].render_ids[render_id] = true
@@ -376,19 +431,40 @@ end
 local function on_tick(event)
   for _, player in pairs(game.connected_players) do
     local player_index = player.index
+    local surface_index = player.surface_index
     global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-    if #global.available_spiders[player_index] == 0 then goto next_player end
+    global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+    if #global.available_spiders[player_index][surface_index] == 0 then goto next_player end
     local character = player.character
-    if not character then goto next_player end
+    local vehicle = player.vehicle
+    local player_entity = character or vehicle or nil
+    if not player_entity then goto next_player end
+
     global.previous_controller[player_index] = global.previous_controller[player_index] or player.controller_type
     if global.previous_controller[player_index] ~= player.controller_type then
       relink_following_spiders(player)
       global.previous_controller[player_index] = player.controller_type
     end
-    local surface = character.surface
-    local inventory = character.get_inventory(defines.inventory.character_main)
-    local character_position_x = character.position.x
-    local character_position_y = character.position.y
+
+    global.previous_color[player_index] = global.previous_color[player_index] or player.color
+    local current = player.color
+    local previous = global.previous_color[player_index]
+    if previous.r ~= current.r or previous.g ~= current.g or previous.b ~= current.b or previous.a ~= current.a then
+      local spiders = global.spiders[player_index]
+      if spiders then
+        for _, spider in pairs(spiders) do
+          if spider.valid then
+            spider.color = current
+          end
+        end
+      end
+      global.previous_color[player_index] = current
+    end
+
+    local surface = player_entity.surface
+    local inventory = character and character.get_inventory(defines.inventory.character_main)
+    local character_position_x = player_entity.position.x
+    local character_position_y = player_entity.position.y
     local area = {
       { character_position_x - 20, character_position_y - 20 },
       { character_position_x + 20, character_position_y + 20 },
@@ -397,29 +473,26 @@ local function on_tick(event)
       area = area,
       to_be_deconstructed = true,
     })
-    -- shuffle_array(to_be_deconstructed)
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
 
-    while #global.available_spiders[player_index] > 0 do
+    while #global.available_spiders[player_index][surface_index] > 0 do
       if not upgrade_ordered then
-        -- for _, decon_entity in random_pairs(to_be_deconstructed) do
         local entity_count = #to_be_deconstructed
         for i = 1, entity_count do
           local index = math.random(1, entity_count)
           local decon_entity = to_be_deconstructed[index]
           if decon_entity then
-            if #global.available_spiders[player_index] == 0 then break end
+            if #global.available_spiders[player_index][surface_index] == 0 then break end
             local entity_id = entity_uuid(decon_entity)
             if not global.tasks.by_entity[entity_id] then
-              -- local space_in_inventory = inventory and inventory.count_empty_stacks() > 0
               local prototype = decon_entity.prototype
               local products = prototype and prototype.mineable_properties.products
               local result_when_mined = (decon_entity.type == "item-entity" and decon_entity.stack) or (products and products[1] and products[1].name) or nil
               local space_in_stack = result_when_mined and inventory and inventory.can_insert(result_when_mined)
               if space_in_stack then
-                local spider = table.remove(global.available_spiders[player_index])
+                local spider = table.remove(global.available_spiders[player_index][surface_index])
                 if spider then
                   assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
                   decon_ordered = true
@@ -442,7 +515,7 @@ local function on_tick(event)
           local index = math.random(1, entity_count)
           local revive_entity = to_be_revived[index]
           if revive_entity then
-            if #global.available_spiders[player_index] == 0 then break end
+            if #global.available_spiders[player_index][surface_index] == 0 then break end
             local entity_id = entity_uuid(revive_entity)
             if not global.tasks.by_entity[entity_id] then
               local items = revive_entity.ghost_prototype.items_to_place_this
@@ -451,7 +524,7 @@ local function on_tick(event)
                 local item_name = item_stack.name
                 local item_count = item_stack.count or 1
                 if inventory and inventory.get_item_count(item_name) >= item_count then
-                  local spider = table.remove(global.available_spiders[player_index])
+                  local spider = table.remove(global.available_spiders[player_index][surface_index])
                   if spider then
                     assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
                     revive_ordered = true
@@ -474,7 +547,7 @@ local function on_tick(event)
           local index = math.random(1, entity_count)
           local upgrade_entity = to_be_upgraded[index]
           if upgrade_entity then
-            if #global.available_spiders[player_index] == 0 then break end
+            if #global.available_spiders[player_index][surface_index] == 0 then break end
             local entity_id = entity_uuid(upgrade_entity)
             if not global.tasks.by_entity[entity_id] then
               local upgrade_target = upgrade_entity.get_upgrade_target()
@@ -484,7 +557,7 @@ local function on_tick(event)
                 local item_name = item_stack.name
                 local item_count = item_stack.count or 1
                 if inventory and inventory.get_item_count(item_name) >= item_count then
-                  local spider = table.remove(global.available_spiders[player_index])
+                  local spider = table.remove(global.available_spiders[player_index][surface_index])
                   if spider then
                     assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                     upgrade_ordered = true
