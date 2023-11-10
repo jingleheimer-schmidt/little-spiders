@@ -204,7 +204,7 @@ local function on_spider_reached_entity(event)
           return
         end
 
-        local inventory = player_entity.get_main_inventory()
+        local inventory = player.get_inventory(defines.inventory.character_main)
 
         if not (inventory and inventory.valid) then
           for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
