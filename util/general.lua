@@ -53,7 +53,12 @@ local function shuffle_array(array)
         local j = math.random(i)
         array[i], array[j] = array[j], array[i]
     end
+end
 
+---@return integer
+local function new_task_id()
+    global.task_id = (global.task_id or 0) + 1
+    return global.task_id
 end
 
 return {
@@ -61,4 +66,5 @@ return {
     randomize_table = randomize_table,
     random_pairs = random_pairs,
     shuffle_array = shuffle_array,
+    new_task_id = new_task_id,
 }
