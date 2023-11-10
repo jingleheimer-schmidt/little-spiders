@@ -331,6 +331,13 @@ local function on_spider_command_completed(event)
               global.tasks.by_spider[spider_id].status = "completed"
               complete_task(spider_id, entity_id, spider, player, player_entity)
               debug_print("deconstruct task completed", player, spider, color.green)
+              spider.surface.create_entity{
+                name = "rocket",
+                position = spider.position,
+                target = entity_position,
+                force = spider.force,
+                speed = 0.05,
+              }
             else
               abandon_task(spider_id, entity_id, spider, player, player_entity)
               debug_print("task abandoned: no space in inventory", player, spider, color.red)
@@ -357,6 +364,13 @@ local function on_spider_command_completed(event)
                 global.tasks.by_spider[spider_id].status = "completed"
                 complete_task(spider_id, entity_id, spider, player, player_entity)
                 debug_print("revive task completed", player, spider, color.green)
+                spider.surface.create_entity{
+                  name = "rocket",
+                  position = spider.position,
+                  target = revived_entity.position,
+                  force = spider.force,
+                  speed = 0.05,
+                }
               else
                 local ghost_position = entity.position
                 local spider_position = spider.position
@@ -410,6 +424,13 @@ local function on_spider_command_completed(event)
                   global.tasks.by_spider[spider_id].status = "completed"
                   complete_task(spider_id, entity_id, spider, player, player_entity)
                   debug_print("upgrade task completed", player, spider, color.green)
+                  spider.surface.create_entity{
+                    name = "rocket",
+                    position = spider.position,
+                    target = upgraded_entity.position,
+                    force = spider.force,
+                    speed = 0.05,
+                  }
                 else
                   local upgrade_position = entity.position
                   local spider_position = spider.position
@@ -433,6 +454,13 @@ local function on_spider_command_completed(event)
             abandon_task(spider_id, entity_id, spider, player, player_entity)
             debug_print("task abandoned: entity no longer needs to be upgraded", player, spider, color.red)
           end
+                spider.surface.create_entity{
+                  name = "rocket",
+                  position = spider.position,
+                  target = proxy_target.position,
+                  force = spider.force,
+                  speed = 0.05,
+                }
         end
 
         -- if not retry_task then
