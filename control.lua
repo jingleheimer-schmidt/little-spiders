@@ -184,9 +184,6 @@ local function on_spider_reached_entity(event)
   local destinations = spider.autopilot_destinations
   if #destinations == 0 then
     local spider_id = entity_uuid(spider)
-
-
-
     local task_data = global.tasks.nudges[spider_id]
     if task_data then
       local player = task_data.player
