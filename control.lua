@@ -1,22 +1,4 @@
 
--- /c local function request_ammo(event)
---   local entity = event.created_entity or event.entity --[[@type LuaEntity]]
---   if not (entity and entity.valid) then return end
---   if entity.type ~= "ammo-turret" then return end
---   if entity.force.name ~= "player" then return end
---   entity.surface.create_entity{
---     name = "item-request-proxy",
---     position = entity.position,
---     force = entity.force,
---     target = entity,
---     modules = {["firearm-magazine"] = 25},
---     raise_built = true
---   }
--- end
--- script.on_event(defines.events.on_built_entity, request_ammo)
--- script.on_event(defines.events.on_robot_built_entity, request_ammo)
--- script.on_event(defines.events.script_raised_built, request_ammo)
-
 --[[ factorio mod little spiders control script created by asher_sky --]]
 
 local general_util = require("util/general")
