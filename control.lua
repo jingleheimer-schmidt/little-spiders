@@ -72,6 +72,12 @@ local function on_configuration_changed(event)
 end
 script.on_configuration_changed(on_configuration_changed)
 
+---@param player LuaPlayer
+---@return LuaEntity?
+local function get_player_entity(player)
+  return player.character or player.vehicle or nil
+end
+
 ---@param event EventData.on_built_entity
 local function on_spider_created(event)
   local spider = event.created_entity
@@ -80,9 +86,7 @@ local function on_spider_created(event)
   local player = game.get_player(player_index)
 
   if player then
-    local character = player.character
-    local vehicle = player.vehicle
-    local player_entity = character or vehicle or nil
+    local player_entity = get_player_entity(player)
     if player_entity then
       spider.color = player.color
       spider.follow_target = player_entity
