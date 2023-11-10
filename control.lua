@@ -137,15 +137,21 @@ local function relink_following_spiders(player)
   local player_index = player.index
   local spiders = global.spiders[player_index]
   if not spiders then return end
-  local character = player.character
-  local vehicle = player.vehicle
+  local player_entity = get_player_entity(player)
   for _, spider in pairs(spiders) do
     if spider.valid then
       if spider.surface_index == player.surface_index then
         local destinations = spider.autopilot_destinations
-        spider.follow_target = character or vehicle or nil
+        if player_entity then
+          spider.color = player.color
+          spider.follow_target = player_entity
+        else
+          spider.color = color.white
+          spider.follow_target = nil
+        end
         local was_nudged = global.tasks.nudges[entity_uuid(spider)]
         if destinations and not was_nudged then
+          -- re-add the destinations to the autopilot since they were cleared when assigning a new follow target
           for _, destination in pairs(destinations) do
             spider.add_autopilot_destination(destination)
           end
