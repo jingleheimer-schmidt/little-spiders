@@ -8,12 +8,7 @@ local function entity_uuid(entity)
     if unit_number then
         return unit_number
     else
-        local name = entity.name
-        local surface = entity.surface_index
-        local position = entity.position
-        local x = floor(position.x * 1000)
-        local y = floor(position.y * 1000)
-        local uuid = string.format("[%s][%s][%d][%d]", name, surface, x, y)
+        local uuid = script.register_on_entity_destroyed(entity)
         return uuid
     end
 end
