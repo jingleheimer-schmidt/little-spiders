@@ -463,23 +463,6 @@ local function on_spider_command_completed(event)
             debug_print("task abandoned: no proxy_target", player, spider, color.red)
           end
         end
-
-        -- if not retry_task then
-        --   for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-        --     if bool then
-        --       rendering.destroy(render_id)
-        --     end
-        --   end
-        --   global.tasks.by_entity[entity_id] = nil
-        --   global.tasks.by_spider[spider_id] = nil
-        --   local player_index = player.index
-        --   local surface_index = player.surface_index
-        --   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-        --   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-        --   table.insert(global.available_spiders[player_index][surface_index], spider)
-        --   spider.color = player.color
-        --   spider.follow_target = player_entity
-        -- end
       end
     end
   else
