@@ -137,10 +137,10 @@ script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 ---@param player LuaPlayer
 local function relink_following_spiders(player)
   local player_index = player.index
-  local character = player.character
-  local vehicle = player.vehicle
   local spiders = global.spiders[player_index]
   if not spiders then return end
+  local character = player.character
+  local vehicle = player.vehicle
   for _, spider in pairs(spiders) do
     if spider.valid then
       if spider.surface_index == player.surface_index then
