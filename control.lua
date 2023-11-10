@@ -440,8 +440,8 @@ local function on_spider_command_completed(event)
             if inventory.get_item_count(item_name) >= item_count then
               local item_to_insert = { name = item_name, count = item_count }
               local request_fulfilled = false
-              if entity.can_insert(item_to_insert) then
-                entity.insert(item_to_insert)
+              if proxy_target.can_insert(item_to_insert) then
+                proxy_target.insert(item_to_insert)
                 inventory.remove(item_to_insert)
                 entity.destroy()
                 request_fulfilled = true
