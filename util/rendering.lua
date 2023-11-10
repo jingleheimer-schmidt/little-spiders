@@ -24,7 +24,7 @@ end
 ---@param to LuaEntity|MapPosition
 ---@param color Color
 ---@param time_to_live integer?
----@param dash_offset number?
+---@param dash_offset boolean?
 ---@return integer
 local function draw_dotted_line(surface, from, to, color, time_to_live, dash_offset)
     local render_id = rendering.draw_line({
@@ -38,7 +38,7 @@ local function draw_dotted_line(surface, from, to, color, time_to_live, dash_off
         only_in_alt_mode = true,
         gap_length = 1,
         dash_length = 1,
-        dash_offset = dash_offset or 0,
+        dash_offset = dash_offset and 1 or 0,
     })
     return render_id
 end

@@ -482,9 +482,9 @@ local function on_script_path_request_finished(event)
 
         -- Draw dotted lines between the spider and the start and final positions to indicate failure to find a path
         draw_dotted_line(surface, spider, start_position, color.white, 60)
-        draw_dotted_line(surface, spider, start_position, color.red, 60, 1)
+        draw_dotted_line(surface, spider, start_position, color.red, 60, true)
         draw_dotted_line(surface, start_position, final_position, color.white, 60)
-        draw_dotted_line(surface, start_position, final_position, color.red, 60, 1)
+        draw_dotted_line(surface, start_position, final_position, color.red, 60, true)
       end
     end
     global.spider_path_to_position_requests[path_request_id] = nil
