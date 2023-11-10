@@ -1,9 +1,9 @@
 
 ---@class task_data
 ---@field entity LuaEntity
----@field entity_id string
+---@field entity_id uuid
 ---@field spider LuaEntity
----@field spider_id string
+---@field spider_id uuid
 ---@field task_type string
 ---@field player LuaPlayer
 ---@field status string
@@ -16,4 +16,11 @@
 ---@field spider_id uuid
 ---@field entity LuaEntity
 ---@field entity_id uuid
+---@field player LuaPlayer
+
+---@class position_path_request_data
+---@field spider LuaEntity
+---@field spider_id uuid
+---@field start_position MapPosition
+---@field final_position MapPosition
 ---@field player LuaPlayer
