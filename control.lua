@@ -21,9 +21,7 @@
 
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
-local randomize_table = general_util.randomize_table
-local random_pairs = general_util.random_pairs
-local shuffle_array = general_util.shuffle_array
+local new_task_id = general_util.new_task_id
 
 local color_util = require("util/colors")
 local color = color_util.color
