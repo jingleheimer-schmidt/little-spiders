@@ -187,7 +187,7 @@ local function on_spider_reached_entity(event)
     local task_data = global.tasks.nudges[spider_id]
     if task_data then
       local player = task_data.player
-      local player_entity = player.character or player.vehicle or nil
+      local player_entity = get_player_entity(player)
       spider.color = player.color
       spider.follow_target = player_entity
       global.tasks.nudges[spider_id] = nil
@@ -200,9 +200,7 @@ local function on_spider_reached_entity(event)
         local task_type = task_data.task_type
 
         if not player.valid then return end
-        local character = player.character
-        local vehicle = player.vehicle
-        local player_entity = character or vehicle or nil
+        local player_entity = get_player_entity(player)
 
         if not (player_entity and player_entity.valid and entity and entity.valid) then
           for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
@@ -377,9 +375,7 @@ local function on_script_path_request_finished(event)
     local player = global.spider_path_requests[path_request_id].player
     local spider_id = global.spider_path_requests[path_request_id].spider_id
     local entity_id = global.spider_path_requests[path_request_id].entity_id
-    local character = player.character
-    local vehicle = player.vehicle
-    local player_entity = character or vehicle or nil
+    local player_entity = get_player_entity(player)
     if (spider and spider.valid and entity and entity.valid and player_entity and player_entity.valid) then
 
       spider.follow_target = player_entity
@@ -426,9 +422,7 @@ local function on_script_path_request_finished(event)
     local start_position = global.spider_path_to_position_requests[path_request_id].start_position
     local player = global.spider_path_to_position_requests[path_request_id].player
     local spider_id = global.spider_path_to_position_requests[path_request_id].spider_id
-    local character = player.character
-    local vehicle = player.vehicle
-    local player_entity = character or vehicle or nil
+    local player_entity = get_player_entity(player)
     if (spider and spider.valid and player_entity and player_entity.valid) then
 
       spider.follow_target = player_entity
@@ -635,9 +629,7 @@ local function on_tick(event)
       global.previous_controller[player_index] = controller_type
     end
 
-    local character = player.character
-    local vehicle = player.vehicle
-    local player_entity = character or vehicle or nil
+    local player_entity = get_player_entity(player)
 
     if not (player_entity and player_entity.valid) then goto next_player end
 
@@ -664,7 +656,7 @@ local function on_tick(event)
     end
 
     local surface = player_entity.surface
-    local inventory = character and character.get_inventory(defines.inventory.character_main)
+    local inventory = player.get_main_inventory()
     local character_position_x = player_entity.position.x
     local character_position_y = player_entity.position.y
     local area = {
