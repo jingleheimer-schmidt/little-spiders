@@ -64,8 +64,30 @@ local function draw_circle(surface, position, color, radius, time_to_live)
     return render_id
 end
 
+---@param message string
+---@param player LuaPlayer
+---@param entity LuaEntity
+---@param color Color?
+local function debug_print(message, player, entity, color)
+    local debug = true
+    if not debug then return end
+    color = color or {}
+    color.r = color.r or 1
+    color.g = color.g or 1
+    color.b = color.b or 1
+    color.a = color.a or 1
+    message = string.format("[color=%d,%d,%d,%d]%s[/color]", color.r, color.g, color.b, color.a, message)
+    player.create_local_flying_text({
+        text = message,
+        position = entity.position,
+        color = {r = 1, g = 1, b = 1},
+        time_to_live = 180,
+    })
+end
+
 return {
     draw_line = draw_line,
     draw_dotted_line = draw_dotted_line,
     draw_circle = draw_circle,
+    debug_print = debug_print,
 }

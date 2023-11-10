@@ -12,12 +12,19 @@ local rendering_util = require("util/rendering")
 local draw_line = rendering_util.draw_line
 local draw_dotted_line = rendering_util.draw_dotted_line
 local draw_circle = rendering_util.draw_circle
+local debug_print = rendering_util.debug_print
 
 local math_util = require("util/math")
 local maximum_length = math_util.maximum_length
 local minimum_length = math_util.minimum_length
 local rotate_around_target = math_util.rotate_around_target
 local random_position_on_circumference = math_util.random_position_on_circumference
+local distance = math_util.distance
+
+local path_request_util = require("util/path_request")
+local request_spider_path_to_entity = path_request_util.request_spider_path_to_entity
+local request_spider_path_to_position = path_request_util.request_spider_path_to_position
+local request_spider_path_to_player = path_request_util.request_spider_path_to_player
 
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
@@ -161,13 +168,98 @@ end
 
 script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
 
+---@param spidertron LuaEntity
+---@param spider_id string|integer
+---@param player LuaPlayer
+local function nudge_spidertron(spidertron, spider_id, player)
+  local autopilot_destinations = spidertron.autopilot_destinations
+  local destination_count = #autopilot_destinations
+  local current_position = spidertron.position
+  local new_position = nil
+  local surface = spidertron.surface
+  for i = 1, 5 do
+    if new_position then break end
+    local nearby_position = random_position_on_circumference(current_position, 5)
+    local non_colliding_position = surface.find_tiles_filtered({
+      position = nearby_position,
+      radius = 2,
+      collision_mask = { "water-tile" },
+      invert = true,
+      limit = 1,
+    })
+    new_position = non_colliding_position and non_colliding_position[1] and non_colliding_position[1].position --[[@as MapPosition]]
+  end
+  new_position = new_position or random_position_on_circumference(current_position, 5)
+  if destination_count >= 1 then
+    local final_destination = autopilot_destinations[destination_count]
+    if destination_count > 1 then
+      autopilot_destinations[1] = new_position
+    else
+      table.insert(autopilot_destinations, 1, new_position)
+    end
+    request_spider_path_to_position(surface, spider_id, spidertron, new_position, final_destination, player)
+    spidertron.autopilot_destination = nil
+    for _, destination in pairs(autopilot_destinations) do
+      spidertron.add_autopilot_destination(destination)
+    end
+  else
+    spidertron.add_autopilot_destination(new_position)
+    request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
+  end
+end
+
+---@param spider_id uuid
+---@param entity_id uuid
+---@param spider LuaEntity
+---@param player LuaPlayer
+---@param player_entity LuaEntity?
+local function abandon_task(spider_id, entity_id, spider, player, player_entity)
+  for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
+    if bool then
+      rendering.destroy(render_id)
+    end
+  end
+  global.tasks.by_entity[entity_id] = nil
+  global.tasks.by_spider[spider_id] = nil
+  local player_index = player.index
+  local surface_index = player.surface_index
+  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+  table.insert(global.available_spiders[player_index][surface_index], spider)
+  spider.color = player.color
+  spider.follow_target = player_entity
+end
+
+---@param spider_id uuid
+---@param entity_id uuid
+---@param spider LuaEntity
+---@param player LuaPlayer
+---@param player_entity LuaEntity?
+local function complete_task(spider_id, entity_id, spider, player, player_entity)
+  for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
+    if bool then
+      rendering.destroy(render_id)
+    end
+  end
+  global.tasks.by_entity[entity_id] = nil
+  global.tasks.by_spider[spider_id] = nil
+  local player_index = player.index
+  local surface_index = player.surface_index
+  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+  table.insert(global.available_spiders[player_index][surface_index], spider)
+  spider.color = player.color
+  spider.follow_target = player_entity
+end
+
 ---@param event EventData.on_spider_command_completed
-local function on_spider_reached_entity(event)
+local function on_spider_command_completed(event)
   local spider = event.vehicle
   if not (spider.name == "little-spidertron") then return end
   local destinations = spider.autopilot_destinations
-  if #destinations == 0 then
-    local spider_id = entity_uuid(spider)
+  local destination_count = #destinations
+  local spider_id = entity_uuid(spider)
+  if destination_count == 0 then
     local task_data = global.tasks.nudges[spider_id]
     if task_data then
       local player = task_data.player
@@ -175,6 +267,7 @@ local function on_spider_reached_entity(event)
       spider.color = player.color
       spider.follow_target = player_entity
       global.tasks.nudges[spider_id] = nil
+      debug_print("nudge completed", player, spider, color.green)
     else
       task_data = global.tasks.by_spider[spider_id]
       if task_data then
@@ -183,44 +276,31 @@ local function on_spider_reached_entity(event)
         local player = task_data.player
         local task_type = task_data.task_type
 
-        if not player.valid then return end
-        local player_entity = get_player_entity(player)
-
-        if not (player_entity and player_entity.valid and entity and entity.valid) then
-          for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-            if bool then
-              rendering.destroy(render_id)
-            end
-          end
-          global.tasks.by_entity[entity_id] = nil
-          global.tasks.by_spider[spider_id] = nil
-          local player_index = player.index
-          local surface_index = player.surface_index
-          global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-          global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-          table.insert(global.available_spiders[player_index][surface_index], spider)
-          spider.color = player.color
-          spider.follow_target = player_entity
+        if not player.valid then
+          abandon_task(spider_id, entity_id, spider, player)
+          debug_print("task abandoned: no valid player", player, spider, color.red)
           return
         end
 
-        local inventory = player.get_inventory(defines.inventory.character_main)
+        local player_entity = get_player_entity(player)
+
+        if not (entity and entity.valid) then
+          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          debug_print("task abandoned: no valid entity", player, spider, color.red)
+          return
+        end
+
+        if not (player_entity and player_entity.valid) then
+          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          debug_print("task abandoned: no valid player entity", player, spider, color.red)
+          return
+        end
+
+        local inventory = player_entity.get_inventory(defines.inventory.character_main)
 
         if not (inventory and inventory.valid) then
-          for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-            if bool then
-              rendering.destroy(render_id)
-            end
-          end
-          global.tasks.by_entity[entity_id] = nil
-          global.tasks.by_spider[spider_id] = nil
-          local player_index = player.index
-          local surface_index = player.surface_index
-          global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-          global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-          table.insert(global.available_spiders[player_index][surface_index], spider)
-          spider.color = player.color
-          spider.follow_target = player_entity
+          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          debug_print("task abandoned: no valid inventory", player, spider, color.red)
           return
         end
 
@@ -249,7 +329,15 @@ local function on_spider_reached_entity(event)
               global.tasks.by_spider[spider_id].render_ids[render_id] = false
               global.tasks.by_entity[entity_id].status = "completed"
               global.tasks.by_spider[spider_id].status = "completed"
+              complete_task(spider_id, entity_id, spider, player, player_entity)
+              debug_print("deconstruct task completed", player, spider, color.green)
+            else
+              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              debug_print("task abandoned: no space in inventory", player, spider, color.red)
             end
+          else
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            debug_print("task abandoned: entity no longer needs to be deconstructed", player, spider, color.red)
           end
 
         elseif task_type == "revive" then
@@ -267,6 +355,8 @@ local function on_spider_reached_entity(event)
                 global.tasks.by_spider[spider_id].render_ids[render_id] = false
                 global.tasks.by_entity[entity_id].status = "completed"
                 global.tasks.by_spider[spider_id].status = "completed"
+                complete_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("revive task completed", player, spider, color.green)
               else
                 local ghost_position = entity.position
                 local spider_position = spider.position
@@ -276,8 +366,15 @@ local function on_spider_reached_entity(event)
                   spider.add_autopilot_destination(rotatated_position)
                 end
                 retry_task = true
+                debug_print("revive task failed: retrying", player, spider, color.red)
               end
+            else
+              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
             end
+          else
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            debug_print("task abandoned: no items_to_place_this", player, spider, color.red)
           end
 
         elseif task_type == "upgrade" then
@@ -311,6 +408,8 @@ local function on_spider_reached_entity(event)
                   global.tasks.by_spider[spider_id].render_ids[render_id] = false
                   global.tasks.by_entity[entity_id].status = "completed"
                   global.tasks.by_spider[spider_id].status = "completed"
+                  complete_task(spider_id, entity_id, spider, player, player_entity)
+                  debug_print("upgrade task completed", player, spider, color.green)
                 else
                   local upgrade_position = entity.position
                   local spider_position = spider.position
@@ -320,34 +419,62 @@ local function on_spider_reached_entity(event)
                     spider.add_autopilot_destination(rotatated_position)
                   end
                   retry_task = true
+                  debug_print("upgrade task failed: retrying", player, spider, color.red)
                 end
+              else
+                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
               end
+            else
+              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              debug_print("task abandoned: no upgrade_target or item_stack", player, spider, color.red)
             end
+          else
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            debug_print("task abandoned: entity no longer needs to be upgraded", player, spider, color.red)
           end
         end
 
-        if not retry_task then
-          for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-            if bool then
-              rendering.destroy(render_id)
-            end
-          end
-          global.tasks.by_entity[entity_id] = nil
-          global.tasks.by_spider[spider_id] = nil
-          local player_index = player.index
-          local surface_index = player.surface_index
-          global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-          global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-          table.insert(global.available_spiders[player_index][surface_index], spider)
-          spider.color = player.color
-          spider.follow_target = player_entity
-        end
+        -- if not retry_task then
+        --   for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
+        --     if bool then
+        --       rendering.destroy(render_id)
+        --     end
+        --   end
+        --   global.tasks.by_entity[entity_id] = nil
+        --   global.tasks.by_spider[spider_id] = nil
+        --   local player_index = player.index
+        --   local surface_index = player.surface_index
+        --   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+        --   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+        --   table.insert(global.available_spiders[player_index][surface_index], spider)
+        --   spider.color = player.color
+        --   spider.follow_target = player_entity
+        -- end
       end
+    end
+  else
+    local task_data = global.tasks.nudges[spider_id]
+    if not task_data then return end
+    local final_destination = destinations[destination_count]
+    local player = task_data.player
+    local player_entity = get_player_entity(player)
+    if not player.valid then
+      global.tasks.nudges[spider_id] = nil
+      return
+    end
+    if not (player_entity and player_entity.valid) then
+      global.tasks.nudges[spider_id] = nil
+      return
+    end
+    local distance_to_player = distance(player_entity.position, final_destination)
+    if distance_to_player > 15 then
+      request_spider_path_to_position(player.surface, spider_id, spider, spider.position, player.position, player)
     end
   end
 end
 
-script.on_event(defines.events.on_spider_command_completed, on_spider_reached_entity)
+script.on_event(defines.events.on_spider_command_completed, on_spider_command_completed)
 
   --[[ 
   This function is called when a spider finishes its path request. It updates the spider's status and 
@@ -479,108 +606,6 @@ end
 
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
----@param surface LuaSurface
----@param spider_id string|integer
----@param spider LuaEntity
----@param entity_id string|integer
----@param entity LuaEntity
----@param player LuaPlayer
-local function request_spider_path_to_entity(surface, spider_id, spider, entity_id, entity, player)
-  local request_parameters = {
-    bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
-    collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" },
-    start = spider.position,
-    goal = entity.position,
-    force = spider.force,
-    radius = maximum_length(entity.bounding_box) + 1,
-    can_open_gates = true,
-    path_resolution_modifier = -1,
-    pathfind_flags = {
-      cache = false,
-      low_priority = true,
-    },
-  }
-  local path_request_id = surface.request_path(request_parameters)
-  global.spider_path_requests[path_request_id] = {
-    spider = spider,
-    spider_id = spider_id,
-    entity = entity,
-    entity_id = entity_id,
-    player = player
-  }
-end
-
----@param surface LuaSurface
----@param spider_id string|integer
----@param spider LuaEntity
----@param starting_position MapPosition
----@param position MapPosition
----@param player LuaPlayer
-local function request_spider_path_to_position(surface, spider_id, spider, starting_position, position, player)
-  local request_parameters = {
-    bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
-    collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" },
-    start = starting_position,
-    goal = position,
-    force = spider.force,
-    radius = 3,
-    can_open_gates = true,
-    path_resolution_modifier = -1,
-    pathfind_flags = {
-      cache = false,
-      low_priority = true,
-    },
-  }
-  local path_request_id = surface.request_path(request_parameters)
-  global.spider_path_to_position_requests[path_request_id] = {
-    spider = spider,
-    spider_id = spider_id,
-    start_position = starting_position,
-    final_position = position,
-    player = player
-  }
-end
-
----@param spidertron LuaEntity
----@param spider_id string|integer
----@param player LuaPlayer
-local function nudge_spidertron(spidertron, spider_id, player)
-  local autopilot_destinations = spidertron.autopilot_destinations
-  local destination_count = #autopilot_destinations
-  local current_position = spidertron.position
-  local new_position = nil
-  local surface = spidertron.surface
-  for i = 1, 5 do
-    if new_position then break end
-    local nearby_position = random_position_on_circumference(current_position, 5)
-    local non_colliding_position = surface.find_tiles_filtered({
-      position = nearby_position,
-      radius = 2,
-      collision_mask = { "water-tile" },
-      invert = true,
-      limit = 1,
-    })
-    new_position = non_colliding_position and non_colliding_position[1] and non_colliding_position[1].position --[[@as MapPosition]]
-  end
-  new_position = new_position or random_position_on_circumference(current_position, 5)
-  if destination_count >= 1 then
-    local final_destination = autopilot_destinations[destination_count]
-    if destination_count > 1 then
-      autopilot_destinations[1] = new_position
-    else
-      table.insert(autopilot_destinations, 1, new_position)
-    end
-    request_spider_path_to_position(surface, spider_id, spidertron, new_position, final_destination, player)
-    spidertron.autopilot_destination = nil
-    for _, destination in pairs(autopilot_destinations) do
-      spidertron.add_autopilot_destination(destination)
-    end
-  else
-    spidertron.add_autopilot_destination(new_position)
-    request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
-  end
-end
-
 ---@param type string
 ---@param entity_id string|integer
 ---@param entity LuaEntity
@@ -603,21 +628,10 @@ local function assign_new_task(type, entity_id, entity, spider, player, surface)
   }
   global.tasks.by_entity[entity_id] = task_data
   global.tasks.by_spider[spider_id] = task_data
-end
+  global.tasks.nudges[spider_id] = nil
 
----@param pos_1 MapPosition
----@param pos_2 MapPosition
----@return number
-local function distance(pos_1, pos_2)
-  local x_1 = pos_1.x
-  local y_1 = pos_1.y
-  local x_2 = pos_2.x
-  local y_2 = pos_2.y
-  local x = x_1 - x_2
-  local y = y_1 - y_2
-  return math.sqrt(x * x + y * y)
+  debug_print("task assigned", player, spider)
 end
-
 
 ---@param event EventData.on_tick
 local function on_tick(event)

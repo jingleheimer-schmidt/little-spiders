@@ -73,9 +73,23 @@ local function random_position_on_circumference(center, radius)
     return {x = x, y = y}
 end
 
+---@param pos_1 MapPosition
+---@param pos_2 MapPosition
+---@return number
+local function distance(pos_1, pos_2)
+    local x_1 = pos_1.x
+    local y_1 = pos_1.y
+    local x_2 = pos_2.x
+    local y_2 = pos_2.y
+    local x = x_1 - x_2
+    local y = y_1 - y_2
+    return math.sqrt(x * x + y * y)
+end
+
 return {
     maximum_length = maximum_length,
     minimum_length = minimum_length,
     rotate_around_target = rotate_around_target,
     random_position_on_circumference = random_position_on_circumference,
+    distance = distance,
 }
