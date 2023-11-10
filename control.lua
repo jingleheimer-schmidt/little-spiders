@@ -454,6 +454,23 @@ local function on_spider_command_completed(event)
             abandon_task(spider_id, entity_id, spider, player, player_entity)
             debug_print("task abandoned: entity no longer needs to be upgraded", player, spider, color.red)
           end
+        elseif task_type == "item_proxy" then
+          local proxy_target = entity.proxy_target
+          if proxy_target then
+            local items = entity.item_requests
+            local item_name, item_count = next(items)
+            if inventory.get_item_count(item_name) >= item_count then
+              local item_to_insert = { name = item_name, count = item_count }
+              local request_fulfilled = false
+              if entity.can_insert(item_to_insert) then
+                entity.insert(item_to_insert)
+                inventory.remove(item_to_insert)
+                entity.destroy()
+                request_fulfilled = true
+              end
+              if request_fulfilled then
+                complete_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("item_proxy task completed", player, spider, color.green)
                 spider.surface.create_entity{
                   name = "rocket",
                   position = spider.position,
@@ -461,6 +478,18 @@ local function on_spider_command_completed(event)
                   force = spider.force,
                   speed = 0.05,
                 }
+              else
+                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("proxy task abandoned: could not insert", player, spider, color.red)
+              end
+            else
+              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
+            end
+          else
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            debug_print("task abandoned: no proxy_target", player, spider, color.red)
+          end
         end
 
         -- if not retry_task then
@@ -720,6 +749,7 @@ local function on_tick(event)
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
+    local item_proxy_ordered = false
 
     while #global.available_spiders[player_index][surface_index] > 0 do
       if not upgrade_ordered then
@@ -810,6 +840,35 @@ local function on_tick(event)
               end
             end
             to_be_upgraded[index] = nil
+          end
+        end
+      end
+
+      if not upgrade_ordered then
+        local item_proxy_requests = surface.find_entities_filtered({
+          area = area,
+          type = "item-request-proxy",
+        })
+        local entity_count = #item_proxy_requests
+        for i = 1, entity_count do
+          local index = math.random(1, entity_count)
+          local item_proxy_request = item_proxy_requests[index]
+          if item_proxy_request then
+            if #global.available_spiders[player_index][surface_index] == 0 then break end
+            local entity_id = entity_uuid(item_proxy_request)
+            if not global.tasks.by_entity[entity_id] then
+              local proxy_target = item_proxy_request.proxy_target
+              local items = item_proxy_request.item_requests
+              local item_name, item_count = next(items)
+              if inventory and inventory.get_item_count(item_name) >= item_count then
+                local spider = table.remove(global.available_spiders[player_index][surface_index])
+                if spider then
+                  assign_new_task("item_proxy", entity_id, item_proxy_request, spider, player, surface)
+                  item_proxy_ordered = true
+                end
+              end
+            end
+            item_proxy_requests[index] = nil
           end
         end
       end
