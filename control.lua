@@ -841,3 +841,17 @@ local function on_tick(event)
 end
 
 script.on_nth_tick(45, on_tick)
+
+local function toggle_debug()
+  global.debug = not global.debug
+  for _, player in pairs(game.connected_players) do
+    player.print("Little Spiders debug mode " .. (global.debug and "enabled" or "disabled"))
+  end
+end
+
+local function add_commands()
+  commands.add_command("little-spider-debug", "- toggles debug mode for the little spiders, showing task targets and path request renderings", toggle_debug)
+end
+
+script.on_init(add_commands)
+script.on_load(add_commands)
