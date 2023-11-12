@@ -116,6 +116,9 @@ local function on_spider_destroyed(event)
     global.tasks.by_entity[entity_id] = nil
     global.tasks.by_spider[unit_number] = nil
   end
+  global.tasks.nudges[unit_number] = nil
+  global.spider_path_requests[unit_number] = nil
+  global.spider_path_to_position_requests[unit_number] = nil
 end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
