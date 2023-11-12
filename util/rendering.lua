@@ -4,8 +4,9 @@
 ---@param to LuaEntity|MapPosition
 ---@param color Color
 ---@param time_to_live integer?
----@return integer
+---@return integer?
 local function draw_line(surface, from, to, color, time_to_live)
+    if not global.debug then return end
     local render_id = rendering.draw_line({
         color = color,
         width = 1.25,
@@ -25,8 +26,9 @@ end
 ---@param color Color
 ---@param time_to_live integer?
 ---@param dash_offset boolean?
----@return integer
+---@return integer?
 local function draw_dotted_line(surface, from, to, color, time_to_live, dash_offset)
+    if not global.debug then return end
     local render_id = rendering.draw_line({
         color = color,
         width = 2,
@@ -48,12 +50,13 @@ end
 ---@param color Color
 ---@param radius number
 ---@param time_to_live integer?
----@return integer
+---@return integer?
 local function draw_circle(surface, position, color, radius, time_to_live)
+    if not global.debug then return end
     local render_id = rendering.draw_circle({
         color = color,
         radius = radius,
-        width = 1,
+        width = 0.5,
         filled = true,
         target = position,
         surface = surface,
@@ -69,8 +72,7 @@ end
 ---@param entity LuaEntity
 ---@param color Color?
 local function debug_print(message, player, entity, color)
-    local debug = true
-    if not debug then return end
+    if not global.debug then return end
     color = color or {}
     color.r = color.r or 1
     color.g = color.g or 1
@@ -85,9 +87,19 @@ local function debug_print(message, player, entity, color)
     })
 end
 
+---@param spider_id uuid
+local function destroy_associated_renderings(spider_id)
+    for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
+        if bool then
+            rendering.destroy(render_id)
+        end
+    end
+end
+
 return {
     draw_line = draw_line,
     draw_dotted_line = draw_dotted_line,
     draw_circle = draw_circle,
     debug_print = debug_print,
+    destroy_associated_renderings = destroy_associated_renderings,
 }

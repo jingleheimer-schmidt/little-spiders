@@ -13,6 +13,7 @@ local draw_line = rendering_util.draw_line
 local draw_dotted_line = rendering_util.draw_dotted_line
 local draw_circle = rendering_util.draw_circle
 local debug_print = rendering_util.debug_print
+local destroy_associated_renderings = rendering_util.destroy_associated_renderings
 
 local math_util = require("util/math")
 local maximum_length = math_util.maximum_length
@@ -214,11 +215,7 @@ end
 ---@param player LuaPlayer
 ---@param player_entity LuaEntity?
 local function abandon_task(spider_id, entity_id, spider, player, player_entity)
-  for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-    if bool then
-      rendering.destroy(render_id)
-    end
-  end
+  destroy_associated_renderings(spider_id)
   global.tasks.by_entity[entity_id] = nil
   global.tasks.by_spider[spider_id] = nil
   local player_index = player.index
@@ -236,11 +233,7 @@ end
 ---@param player LuaPlayer
 ---@param player_entity LuaEntity?
 local function complete_task(spider_id, entity_id, spider, player, player_entity)
-  for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-    if bool then
-      rendering.destroy(render_id)
-    end
-  end
+  destroy_associated_renderings(spider_id)
   global.tasks.by_entity[entity_id] = nil
   global.tasks.by_spider[spider_id] = nil
   local player_index = player.index
@@ -324,9 +317,7 @@ local function on_spider_command_completed(event)
                 end
                 if count > 4 then break end
               end
-              local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
-              global.tasks.by_entity[entity_id].render_ids[render_id] = false
-              global.tasks.by_spider[spider_id].render_ids[render_id] = false
+              draw_line(spider.surface, player_entity, spider, player.color, 20)
               global.tasks.by_entity[entity_id].status = "completed"
               global.tasks.by_spider[spider_id].status = "completed"
               complete_task(spider_id, entity_id, spider, player, player_entity)
@@ -350,9 +341,7 @@ local function on_spider_command_completed(event)
               local dictionary, revived_entity = entity.revive({ return_item_request_proxy = false, raise_revive = true})
               if revived_entity then
                 inventory.remove(item_stack)
-                local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
-                global.tasks.by_entity[entity_id].render_ids[render_id] = false
-                global.tasks.by_spider[spider_id].render_ids[render_id] = false
+                draw_line(spider.surface, player_entity, spider, player.color, 20)
                 global.tasks.by_entity[entity_id].status = "completed"
                 global.tasks.by_spider[spider_id].status = "completed"
                 complete_task(spider_id, entity_id, spider, player, player_entity)
@@ -402,9 +391,7 @@ local function on_spider_command_completed(event)
                 ---@diagnostic enable:missing-fields
                 if upgraded_entity then
                   inventory.remove(item_stack)
-                  local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
-                  global.tasks.by_entity[entity_id].render_ids[render_id] = false
-                  global.tasks.by_spider[spider_id].render_ids[render_id] = false
+                  draw_line(spider.surface, player_entity, spider, player.color, 20)
                   global.tasks.by_entity[entity_id].status = "completed"
                   global.tasks.by_spider[spider_id].status = "completed"
                   complete_task(spider_id, entity_id, spider, player, player_entity)
@@ -523,8 +510,10 @@ local function on_script_path_request_finished(event)
         global.tasks.by_entity[entity_id].status = "on_the_way"
         global.tasks.by_spider[spider_id].status = "on_the_way"
         local render_id = draw_line(spider.surface, entity, spider, task_color)
-        global.tasks.by_entity[entity_id].render_ids[render_id] = true
-        global.tasks.by_spider[spider_id].render_ids[render_id] = true
+        if render_id then
+          global.tasks.by_entity[entity_id].render_ids[render_id] = true
+          global.tasks.by_spider[spider_id].render_ids[render_id] = true
+        end
 
       else
         -- If no path was found, add a random nearby destination for the spider autopilot and update the available spiders table
@@ -543,11 +532,7 @@ local function on_script_path_request_finished(event)
         draw_dotted_line(spider.surface, spider, entity, color.red, 30, true)
 
         -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
-        for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
-          if bool then
-            rendering.destroy(render_id)
-          end
-        end
+        destroy_associated_renderings(spider_id)
         global.tasks.by_entity[entity_id] = nil
         global.tasks.by_spider[spider_id] = nil
       end
