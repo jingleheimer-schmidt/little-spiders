@@ -461,11 +461,8 @@ local function on_spider_command_completed(event)
     local final_destination = destinations[destination_count]
     local player = nudge_task_data.player
     local player_entity = get_player_entity(player)
-    if not player.valid then
-      global.tasks.nudges[spider_id] = nil
-      return
-    end
-    if not (player_entity and player_entity.valid) then
+    -- Remove nudge task if player is not valid or player entity is not valid
+    if not player.valid or not (player_entity and player_entity.valid) then
       global.tasks.nudges[spider_id] = nil
       return
     end
