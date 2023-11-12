@@ -454,6 +454,8 @@ local function on_spider_command_completed(event)
   else
     local task_data = global.tasks.nudges[spider_id]
     if not task_data then return end
+    local active_task = global.tasks.by_spider[spider_id]
+    if active_task then return end
     local final_destination = destinations[destination_count]
     local player = task_data.player
     local player_entity = get_player_entity(player)
