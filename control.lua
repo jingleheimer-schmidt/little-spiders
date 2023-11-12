@@ -39,7 +39,7 @@ local function on_init()
   global.spider_path_to_position_requests = {} --[[@type table<integer, position_path_request_data>]]
   global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
   global.previous_controller = {} --[[@type table<integer, defines.controllers>]]
-  global.previous_entity = {} --[[@type table<integer, uuid>]]
+  global.previous_player_entity = {} --[[@type table<integer, uuid>]]
   global.previous_color = {} --[[@type table<integer, Color>]]
 end
 script.on_init(on_init)
@@ -55,7 +55,7 @@ local function on_configuration_changed(event)
   global.spider_path_to_position_requests = global.spider_path_to_position_requests or {}
   global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
   global.previous_controller = global.previous_controller or {}
-  global.previous_entity = global.previous_entity or {}
+  global.previous_player_entity = global.previous_player_entity or {}
   global.previous_color = global.previous_color or {}
 end
 script.on_configuration_changed(on_configuration_changed)
@@ -652,10 +652,10 @@ local function on_tick(event)
     if not (player_entity and player_entity.valid) then goto next_player end
 
     local player_entity_id = entity_uuid(player_entity)
-    global.previous_entity[player_index] = global.previous_entity[player_index] or player_entity_id
-    if global.previous_entity[player_index] ~= player_entity_id then
+    global.previous_player_entity[player_index] = global.previous_player_entity[player_index] or player_entity_id
+    if global.previous_player_entity[player_index] ~= player_entity_id then
       relink_following_spiders(player)
-      global.previous_entity[player_index] = player_entity_id
+      global.previous_player_entity[player_index] = player_entity_id
     end
 
     global.previous_color[player_index] = global.previous_color[player_index] or player.color
