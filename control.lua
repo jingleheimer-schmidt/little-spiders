@@ -181,21 +181,28 @@ local function nudge_spidertron(spidertron, spider_id, player)
   local autopilot_destinations = spidertron.autopilot_destinations
   local destination_count = #autopilot_destinations
   local current_position = spidertron.position
-  local new_position = nil
   local surface = spidertron.surface
-  for i = 1, 5 do
-    if new_position then break end
-    local nearby_position = random_position_on_circumference(current_position, 5)
-    local non_colliding_position = surface.find_tiles_filtered({
-      position = nearby_position,
-      radius = 2,
-      collision_mask = { "water-tile" },
-      invert = true,
-      limit = 1,
-    })
-    new_position = non_colliding_position and non_colliding_position[1] and non_colliding_position[1].position --[[@as MapPosition]]
-  end
-  new_position = new_position or random_position_on_circumference(current_position, 5)
+  local nearby_position = random_position_on_circumference(current_position, 20)
+  local new_position = surface.find_tiles_filtered({
+    position = nearby_position,
+    radius = 10,
+    collision_mask = { "water-tile" },
+    invert = true,
+    limit = 1,
+  })
+  new_position = new_position and new_position[1] and new_position[1].position --[[@as MapPosition]] or nil
+  -- for i = 1, 5 do
+  --   if new_position then break end
+  --   local non_colliding_position = surface.find_tiles_filtered({
+  --     position = nearby_position,
+  --     radius = 5,
+  --     collision_mask = { "water-tile" },
+  --     invert = true,
+  --     limit = 1,
+  --   })
+  --   new_position = non_colliding_position and non_colliding_position[1] and non_colliding_position[1].position --[[@as MapPosition]]
+  -- end
+  new_position = new_position or nearby_position
   if destination_count >= 1 then
     local final_destination = autopilot_destinations[destination_count]
     if destination_count > 1 then
