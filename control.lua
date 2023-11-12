@@ -597,11 +597,11 @@ local function on_script_path_request_finished(event)
         if math.random() < 0.125 then
           spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
         end
-        local player_index = player.index
-        local surface_index = player.surface_index
-        global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-        global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-        table.insert(global.available_spiders[player_index][surface_index], spider)
+        -- local player_index = player.index
+        -- local surface_index = player.surface_index
+        -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+        -- global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+        -- table.insert(global.available_spiders[player_index][surface_index], spider)
         spider.color = player.color
 
         -- Draw dotted lines between the spider and the start and final positions to indicate failure to find a path
