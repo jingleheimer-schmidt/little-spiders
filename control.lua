@@ -126,7 +126,7 @@ local function relink_following_spiders(player)
   local spiders = global.spiders[player_index]
   if not spiders then return end
   local player_entity = get_player_entity(player)
-  for _, spider in pairs(spiders) do
+  for index, spider in pairs(spiders) do
     if spider.valid then
       if spider.surface_index == player.surface_index then
         local destinations = spider.autopilot_destinations
@@ -145,6 +145,8 @@ local function relink_following_spiders(player)
           end
         end
       end
+    else
+      spiders[index] = nil
     end
   end
 end
