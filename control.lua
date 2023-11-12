@@ -539,8 +539,8 @@ local function on_script_path_request_finished(event)
         spider.color = player.color
 
         -- Draw dotted lines between the spider and the entity to indicate failure to find a path
-        draw_dotted_line(spider.surface, spider, entity, color.white, 60)
-        draw_dotted_line(spider.surface, spider, entity, color.red, 60, true)
+        draw_dotted_line(spider.surface, spider, entity, color.white, 30)
+        draw_dotted_line(spider.surface, spider, entity, color.red, 30, true)
 
         -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
         for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
@@ -605,10 +605,10 @@ local function on_script_path_request_finished(event)
         spider.color = player.color
 
         -- Draw dotted lines between the spider and the start and final positions to indicate failure to find a path
-        draw_dotted_line(surface, spider, start_position, color.white, 60)
-        draw_dotted_line(surface, spider, start_position, color.red, 60, true)
-        draw_dotted_line(surface, start_position, final_position, color.white, 60)
-        draw_dotted_line(surface, start_position, final_position, color.red, 60, true)
+        draw_dotted_line(surface, spider, start_position, color.white, 30)
+        draw_dotted_line(surface, spider, start_position, color.red, 30, true)
+        draw_dotted_line(surface, start_position, final_position, color.white, 30)
+        draw_dotted_line(surface, start_position, final_position, color.red, 30, true)
       end
     end
     global.spider_path_to_position_requests[path_request_id] = nil
