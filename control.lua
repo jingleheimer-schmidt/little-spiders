@@ -40,7 +40,7 @@ local function on_init()
   global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
   global.previous_controller = {} --[[@type table<integer, defines.controllers>]]
   global.previous_player_entity = {} --[[@type table<integer, uuid>]]
-  global.previous_color = {} --[[@type table<integer, Color>]]
+  global.previous_player_color = {} --[[@type table<integer, Color>]]
 end
 script.on_init(on_init)
 
@@ -56,7 +56,7 @@ local function on_configuration_changed(event)
   global.spider_leg_collision_mask = game.entity_prototypes["little-spidertron-leg-1"].collision_mask
   global.previous_controller = global.previous_controller or {}
   global.previous_player_entity = global.previous_player_entity or {}
-  global.previous_color = global.previous_color or {}
+  global.previous_player_color = global.previous_player_color or {}
 end
 script.on_configuration_changed(on_configuration_changed)
 
@@ -658,9 +658,9 @@ local function on_tick(event)
       global.previous_player_entity[player_index] = player_entity_id
     end
 
-    global.previous_color[player_index] = global.previous_color[player_index] or player.color
+    global.previous_player_color[player_index] = global.previous_player_color[player_index] or player.color
     local current = player.color
-    local previous = global.previous_color[player_index]
+    local previous = global.previous_player_color[player_index]
     if (previous.r ~= current.r) or (previous.g ~= current.g) or (previous.b ~= current.b) or (previous.a ~= current.a) then
       local spiders = global.spiders[player_index]
       if spiders then
@@ -672,7 +672,7 @@ local function on_tick(event)
           end
         end
       end
-      global.previous_color[player_index] = current
+      global.previous_player_color[player_index] = current
     end
 
     local surface = player_entity.surface
