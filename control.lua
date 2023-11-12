@@ -412,9 +412,9 @@ local function on_spider_command_completed(event)
                 else
                   local upgrade_position = entity.position
                   local spider_position = spider.position
-                  local distance = maximum_length(entity.bounding_box) + 1
+                  local length = maximum_length(entity.bounding_box) + 1
                   for i = 1, 45, 5 do
-                    local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, distance)
+                    local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, length)
                     spider.add_autopilot_destination(rotatated_position)
                   end
                   retry_task = true
