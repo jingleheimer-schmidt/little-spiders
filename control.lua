@@ -347,7 +347,7 @@ local function on_spider_command_completed(event)
             local item_name = item_stack.name
             local item_count = item_stack.count or 1
             if inventory.get_item_count(item_name) >= item_count then
-              local dictionary, revived_entity = entity.revive({ false, true })
+              local dictionary, revived_entity = entity.revive({ return_item_request_proxy = false, raise_revive = true})
               if revived_entity then
                 inventory.remove(item_stack)
                 local render_id = draw_line(spider.surface, player_entity, spider, player.color, 20)
