@@ -41,6 +41,7 @@ local function on_init()
   global.previous_controller = {} --[[@type table<integer, defines.controllers>]]
   global.previous_player_entity = {} --[[@type table<integer, uuid>]]
   global.previous_player_color = {} --[[@type table<integer, Color>]]
+  global.path_requested = {} --[[@type table<uuid, boolean>]]
 end
 script.on_init(on_init)
 
@@ -57,6 +58,7 @@ local function on_configuration_changed(event)
   global.previous_controller = global.previous_controller or {}
   global.previous_player_entity = global.previous_player_entity or {}
   global.previous_player_color = global.previous_player_color or {}
+  global.path_requested = global.path_requested or {}
 end
 script.on_configuration_changed(on_configuration_changed)
 
@@ -119,6 +121,7 @@ local function on_spider_destroyed(event)
   global.tasks.nudges[unit_number] = nil
   global.spider_path_requests[unit_number] = nil
   global.spider_path_to_position_requests[unit_number] = nil
+  global.path_requested[unit_number] = nil
 end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
@@ -210,14 +213,19 @@ local function nudge_spidertron(spidertron, spider_id, player)
     else
       table.insert(autopilot_destinations, 1, new_position)
     end
-    request_spider_path_to_position(surface, spider_id, spidertron, new_position, final_destination, player)
     spidertron.autopilot_destination = nil
+    -- spidertron.follow_target = get_player_entity(player)
     for _, destination in pairs(autopilot_destinations) do
       spidertron.add_autopilot_destination(destination)
     end
+    if not global.path_requested[spider_id] then
+      request_spider_path_to_position(surface, spider_id, spidertron, new_position, final_destination, player)
+    end
   else
     spidertron.add_autopilot_destination(new_position)
-    request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
+    if not global.path_requested[spider_id] then
+      request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
+    end
   end
 end
 
@@ -477,8 +485,11 @@ local function on_spider_command_completed(event)
       return
     end
     local distance_to_player = distance(player_entity.position, final_destination)
-    if distance_to_player > 30 then
-      request_spider_path_to_position(player.surface, spider_id, spider, spider.position, player.position, player)
+    local chance = math.random()
+    if chance < 0.125 and distance_to_player > 30 then
+      if not global.path_requested[spider_id] then
+        request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
+      end
     end
   end
 end
@@ -549,6 +560,7 @@ local function on_script_path_request_finished(event)
       end
     end
     global.spider_path_requests[path_request_id] = nil
+    global.path_requested[spider_id] = nil
   elseif global.spider_path_to_position_requests[path_request_id] then
     local spider = global.spider_path_to_position_requests[path_request_id].spider
     local final_position = global.spider_path_to_position_requests[path_request_id].final_position
@@ -591,7 +603,7 @@ local function on_script_path_request_finished(event)
       else
         -- If no path was found, add a random autopilot destination for the spider and update the available spiders table
         if math.random() < 0.125 then
-          spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
+          spider.add_autopilot_destination(random_position_on_circumference(spider.position, 20))
         end
         -- local player_index = player.index
         -- local surface_index = player.surface_index
@@ -608,6 +620,7 @@ local function on_script_path_request_finished(event)
       end
     end
     global.spider_path_to_position_requests[path_request_id] = nil
+    global.path_requested[spider_id] = nil
   end
 end
 
@@ -827,9 +840,11 @@ local function on_tick(event)
 
     for spider_id, spider in pairs(global.spiders[player_index]) do
       if spider.speed == 0 then
-        if distance(spider.position, player.position) > 25 then
-          nudge_spidertron(spider, spider_id, player)
-        end
+        -- if not global.path_requested[spider_id] then
+          if distance(spider.position, player.position) > 25 then
+            nudge_spidertron(spider, spider_id, player)
+          end
+        -- end
       end
     end
     ::next_player::
