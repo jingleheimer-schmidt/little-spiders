@@ -455,11 +455,11 @@ local function on_spider_command_completed(event)
               end
             else
               abandon_task(spider_id, entity_id, spider, player, player_entity)
-              debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
+              debug_print("proxy task abandoned: not enough items in inventory", player, spider, color.red)
             end
           else
             abandon_task(spider_id, entity_id, spider, player, player_entity)
-            debug_print("task abandoned: no proxy_target", player, spider, color.red)
+            debug_print("proxy task abandoned: no proxy_target", player, spider, color.red)
           end
         end
       end
