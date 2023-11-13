@@ -854,13 +854,13 @@ local function on_tick(event)
       break
     end
 
-    local spider_nudged = 0
+    local counter = 0
     for spider_id, spider in pairs(global.spiders[player_index]) do
-      if (spider_nudged < 5) and (spider.speed == 0) then
+      if (counter < 5) and (spider.speed == 0) then
         if not global.path_requested[spider_id] then
           if distance(spider.position, player.position) > 25 then
             nudge_spidertron(spider, spider_id, player)
-            spider_nudged = spider_nudged + 1
+            counter = counter + 1
           end
         end
       end
