@@ -51,7 +51,7 @@ local function request_spider_path_to_position(surface, spider_id, spider, start
         can_open_gates = true,
         path_resolution_modifier = -1,
         pathfind_flags = {
-            cache = false,
+            cache = true,
             low_priority = true,
         },
     }
