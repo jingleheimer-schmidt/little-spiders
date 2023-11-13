@@ -150,6 +150,16 @@ local function relink_following_spiders(player)
             spider.add_autopilot_destination(destination)
           end
         end
+        local spider_id = entity_uuid(spider)
+        local task_data = global.tasks.by_spider[spider_id]
+        if task_data then
+          local entity_id = task_data.entity_id
+          local entity = task_data.entity
+          if not (entity and entity.valid) then
+            global.tasks.by_entity[entity_id] = nil
+            global.tasks.by_spider[spider_id] = nil
+          end
+        end
       end
     else
       spiders[index] = nil
