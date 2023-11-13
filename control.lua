@@ -473,9 +473,15 @@ local function on_spider_command_completed(event)
     end
   else
     local nudge_task_data = global.tasks.nudges[spider_id]
-    if not nudge_task_data then return end
+    if not nudge_task_data then
+      -- debug_print("nudge task abandoned: no nudge task data", nudge_task_data.player, spider, color.red)
+      return
+    end
     local active_task = global.tasks.by_spider[spider_id]
-    if active_task then return end
+    if active_task then
+      debug_print("nudge task abandoned: active task", nudge_task_data.player, spider, color.red)
+      return
+    end
     local final_destination = destinations[destination_count]
     local player = nudge_task_data.player
     local player_entity = get_player_entity(player)
