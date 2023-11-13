@@ -22,14 +22,20 @@ if legs[1] then
     for _, leg in pairs(legs) do
         for _, trigger in pairs(leg.leg_hit_the_ground_trigger) do
             trigger.repeat_count = 1
-            trigger.probability = 0.25
+            trigger.probability = 0.125
         end
+        local leg_name = leg.leg
+        local leg_prototype = data.raw["spider-leg"][leg_name]
+        leg_prototype.walking_sound_volume_modifier = 0.125
     end
 else
     for _, trigger in pairs(legs.leg_hit_the_ground_trigger) do
         trigger.repeat_count = 1
-        trigger.probability = 0.25
+        trigger.probability = 0.125
     end
+    local leg_name = legs.leg
+    local leg_prototype = data.raw["spider-leg"][leg_name]
+    leg_prototype.walking_sound_volume_modifier = 0.125
 end
 local selection_box = little_spider_entity.selection_box
 if selection_box then
