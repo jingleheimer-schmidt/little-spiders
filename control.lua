@@ -849,6 +849,11 @@ local function on_tick(event)
     end
     ::next_player::
   end
+  local entity_task_count = #global.tasks.by_entity
+  local spider_task_count = #global.tasks.by_spider
+  if entity_task_count ~= spider_task_count then
+    game.print("Little Spiders: task count mismatch: " .. entity_task_count .. " entity tasks, " .. spider_task_count .. " spider tasks")
+  end
 end
 
 script.on_nth_tick(45, on_tick)
