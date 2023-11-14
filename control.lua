@@ -380,12 +380,18 @@ local function on_spider_command_completed(event)
               else
                 local ghost_position = entity.position
                 local spider_position = spider.position
-                for i = 1, 45, 5 do
-                  local rotatated_position = rotate_around_target(ghost_position, spider_position, i, maximum_length(entity.bounding_box))
-                  spider.add_autopilot_destination(rotatated_position)
+                local distance_to_player = distance(ghost_position, player.position)
+                if distance_to_player > 50 then
+                  abandon_task(spider_id, entity_id, spider, player, player_entity)
+                  debug_print("task abandoned: player too far from ghost", player, spider, color.red)
+                else
+                  for i = 1, 300, 10 do
+                    local rotatated_position = rotate_around_target(ghost_position, spider_position, i, maximum_length(entity.bounding_box))
+                    spider.add_autopilot_destination(rotatated_position)
+                  end
+                  retry_task = true
+                  debug_print("revive task failed: retrying", player, spider, color.red)
                 end
-                retry_task = true
-                debug_print("revive task failed: retrying", player, spider, color.red)
               end
             else
               abandon_task(spider_id, entity_id, spider, player, player_entity)
