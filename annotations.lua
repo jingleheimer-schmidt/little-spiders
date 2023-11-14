@@ -8,6 +8,7 @@
 ---@field player LuaPlayer
 ---@field status string
 ---@field render_ids table<integer, boolean>
+---@field path_request_id integer?
 
 ---@alias uuid string|integer
 
