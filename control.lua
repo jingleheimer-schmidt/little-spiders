@@ -869,6 +869,9 @@ local function on_tick(event)
             nudge_spidertron(spider, spider_id, player)
             counter = counter + 1
           end
+          if global.tasks.by_spider[spider_id] then
+            abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
+          end
         end
       end
     end
