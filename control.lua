@@ -236,6 +236,17 @@ end
 ---@param player_entity LuaEntity?
 local function abandon_task(spider_id, entity_id, spider, player, player_entity)
   destroy_associated_renderings(spider_id)
+  local entity_path_request_id = global.tasks.by_entity[entity_id].path_request_id
+  local spider_path_request_id = global.tasks.by_spider[spider_id].path_request_id
+  if entity_path_request_id then
+    global.spider_path_requests[entity_path_request_id] = nil
+    global.spider_path_to_position_requests[entity_path_request_id] = nil
+  end
+  if spider_path_request_id then
+    global.spider_path_requests[spider_path_request_id] = nil
+    global.spider_path_to_position_requests[spider_path_request_id] = nil
+  end
+  global.path_requested[spider_id] = nil
   global.tasks.by_entity[entity_id] = nil
   global.tasks.by_spider[spider_id] = nil
   local player_index = player.index
