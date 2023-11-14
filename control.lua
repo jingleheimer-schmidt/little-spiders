@@ -509,7 +509,7 @@ local function on_spider_command_completed(event)
     end
     local distance_to_player = distance(player_entity.position, final_destination)
     local chance = math.random()
-    if chance < 1 and distance_to_player > 30 then
+    if chance < 1 and distance_to_player > 50 then
       if not global.path_requested[spider_id] then
         request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
       end
@@ -865,7 +865,7 @@ local function on_tick(event)
     for spider_id, spider in pairs(global.spiders[player_index]) do
       if (counter < 5) and (spider.speed == 0) then
         if not global.path_requested[spider_id] then
-          if distance(spider.position, player.position) > 25 then
+          if distance(spider.position, player.position) > 50 then
             nudge_spidertron(spider, spider_id, player)
             counter = counter + 1
           end
