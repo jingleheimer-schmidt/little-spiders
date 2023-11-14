@@ -502,29 +502,31 @@ local function on_spider_command_completed(event)
       end
     end
   else
-    local nudge_task_data = global.tasks.nudges[spider_id]
-    if not nudge_task_data then
-      -- debug_print("nudge task abandoned: no nudge task data", nudge_task_data.player, spider, color.red)
-      return
-    end
-    local active_task = global.tasks.by_spider[spider_id]
-    if active_task then
-      debug_print("nudge task abandoned: active task", nudge_task_data.player, spider, color.red)
-      return
-    end
-    local final_destination = destinations[destination_count]
-    local player = nudge_task_data.player
-    local player_entity = get_player_entity(player)
-    -- Remove nudge task if player is not valid or player entity is not valid
-    if not player.valid or not (player_entity and player_entity.valid) then
-      global.tasks.nudges[spider_id] = nil
-      return
-    end
-    local distance_to_player = distance(player_entity.position, final_destination)
     local chance = math.random()
-    if chance < 1 and distance_to_player > 50 then
-      if not global.path_requested[spider_id] then
-        request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
+    if chance < 0.25 then
+      local nudge_task_data = global.tasks.nudges[spider_id]
+      if not nudge_task_data then
+        -- debug_print("nudge task abandoned: no nudge task data", nudge_task_data.player, spider, color.red)
+        return
+      end
+      local active_task = global.tasks.by_spider[spider_id]
+      if active_task then
+        debug_print("nudge task abandoned: active task", nudge_task_data.player, spider, color.red)
+        return
+      end
+      local final_destination = destinations[destination_count]
+      local player = nudge_task_data.player
+      local player_entity = get_player_entity(player)
+      -- Remove nudge task if player is not valid or player entity is not valid
+      if not player.valid or not (player_entity and player_entity.valid) then
+        global.tasks.nudges[spider_id] = nil
+        return
+      end
+      local distance_to_player = distance(player_entity.position, final_destination)
+      if chance < 1 and distance_to_player > 50 then
+        if not global.path_requested[spider_id] then
+          request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
+        end
       end
     end
   end
