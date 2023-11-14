@@ -263,7 +263,7 @@ local function abandon_task(spider_id, entity_id, spider, player, player_entity)
   global.tasks.by_entity[entity_id] = nil
   global.tasks.by_spider[spider_id] = nil
   local player_index = player.index
-  local surface_index = player.surface_index
+  local surface_index = spider.surface_index
   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -281,7 +281,7 @@ local function complete_task(spider_id, entity_id, spider, player, player_entity
   global.tasks.by_entity[entity_id] = nil
   global.tasks.by_spider[spider_id] = nil
   local player_index = player.index
-  local surface_index = player.surface_index
+  local surface_index = spider.surface_index
   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -579,7 +579,7 @@ local function on_script_path_request_finished(event)
           spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
         end
         local player_index = player.index
-        local surface_index = player.surface_index
+        local surface_index = spider.surface_index
         global.available_spiders[player_index] = global.available_spiders[player_index] or {}
         global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
         table.insert(global.available_spiders[player_index][surface_index], spider)
