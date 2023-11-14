@@ -616,8 +616,8 @@ local function on_script_path_request_finished(event)
         local previous_position = spider.position
         for _, waypoint in pairs(path) do
           local new_position = waypoint.position
-          spider.add_autopilot_destination(waypoint.position)
           draw_circle(surface, new_position, color.white, 0.33, 90)
+          spider.add_autopilot_destination(new_position)
           if previous_position then
             draw_line(surface, previous_position, new_position, color.white, 90)
           end
