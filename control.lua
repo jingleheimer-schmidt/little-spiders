@@ -25,7 +25,6 @@ local distance = math_util.distance
 local path_request_util = require("util/path_request")
 local request_spider_path_to_entity = path_request_util.request_spider_path_to_entity
 local request_spider_path_to_position = path_request_util.request_spider_path_to_position
-local request_spider_path_to_player = path_request_util.request_spider_path_to_player
 
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
