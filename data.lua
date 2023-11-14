@@ -49,7 +49,7 @@ end
 
 for i = 1, 8 do
     local leg = data.raw["spider-leg"]["little-spidertron-leg-" .. i]
-    leg.collision_mask = {"object-layer", "water-tile", "rail-layer"}
+    leg.collision_mask = {"object-layer", "water-tile", "rail-layer", "not-colliding-with-itself" }
 end
 
 local little_spider_recipe = table.deepcopy(data.raw["recipe"]["spidertron"])
