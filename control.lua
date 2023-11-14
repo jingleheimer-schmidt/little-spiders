@@ -26,6 +26,17 @@ local path_request_util = require("util/path_request")
 local request_spider_path_to_entity = path_request_util.request_spider_path_to_entity
 local request_spider_path_to_position = path_request_util.request_spider_path_to_position
 
+local function toggle_debug()
+  global.debug = not global.debug
+  for _, player in pairs(game.connected_players) do
+    player.print("Little Spiders debug mode " .. (global.debug and "enabled" or "disabled"))
+  end
+end
+
+local function add_commands()
+  commands.add_command("little-spider-debug", "- toggles debug mode for the little spiders, showing task targets and path request renderings", toggle_debug)
+end
+
 local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
   global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity[]>>]]
@@ -41,8 +52,8 @@ local function on_init()
   global.previous_player_entity = {} --[[@type table<integer, uuid>]]
   global.previous_player_color = {} --[[@type table<integer, Color>]]
   global.path_requested = {} --[[@type table<uuid, boolean>]]
+  add_commands()
 end
-script.on_init(on_init)
 
 local function on_configuration_changed(event)
   global.spiders = global.spiders or {}
@@ -59,6 +70,9 @@ local function on_configuration_changed(event)
   global.previous_player_color = global.previous_player_color or {}
   global.path_requested = global.path_requested or {}
 end
+
+script.on_init(on_init)
+script.on_load(add_commands)
 script.on_configuration_changed(on_configuration_changed)
 
 ---@param player LuaPlayer
@@ -884,17 +898,3 @@ local function on_tick(event)
 end
 
 script.on_nth_tick(45, on_tick)
-
-local function toggle_debug()
-  global.debug = not global.debug
-  for _, player in pairs(game.connected_players) do
-    player.print("Little Spiders debug mode " .. (global.debug and "enabled" or "disabled"))
-  end
-end
-
-local function add_commands()
-  commands.add_command("little-spider-debug", "- toggles debug mode for the little spiders, showing task targets and path request renderings", toggle_debug)
-end
-
-script.on_init(add_commands)
-script.on_load(add_commands)
