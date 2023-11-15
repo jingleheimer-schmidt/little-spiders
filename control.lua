@@ -787,7 +787,7 @@ local function on_tick(event)
               local space_in_stack = result_when_mined and inventory and inventory.can_insert(result_when_mined)
               if space_in_stack then
                 local spider = table.remove(global.available_spiders[player_index][surface_index])
-                if spider then
+                if spider and spider.valid then
                   assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
                   decon_ordered = true
                 end
@@ -819,7 +819,7 @@ local function on_tick(event)
                 local item_count = item_stack.count or 1
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index][surface_index])
-                  if spider then
+                  if spider and spider.valid then
                     assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
                     revive_ordered = true
                   end
@@ -852,7 +852,7 @@ local function on_tick(event)
                 local item_count = item_stack.count or 1
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index][surface_index])
-                  if spider then
+                  if spider and spider.valid then
                     assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                     upgrade_ordered = true
                   end
@@ -897,16 +897,24 @@ local function on_tick(event)
 
     local counter = 0
     for spider_id, spider in pairs(global.spiders[player_index]) do
-      if (counter < 5) and (spider.speed == 0) then
-        if not global.path_requested[spider_id] then
-          if distance(spider.position, player.position) > 50 then
-            nudge_spidertron(spider, spider_id, player)
-            counter = counter + 1
-          end
-          if global.tasks.by_spider[spider_id] then
-            abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
+      if spider.valid then
+        local no_speed = spider.speed == 0
+        local distance_to_player = distance(spider.position, player.position)
+        local exceeds_distance_limit = distance_to_player > 50
+        local active_task = global.tasks.by_spider[spider_id]
+        if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
+          if not global.path_requested[spider_id] then
+            if exceeds_distance_limit then
+              nudge_spidertron(spider, spider_id, player)
+              counter = counter + 1
+            end
+            if active_task then
+              abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
+            end
           end
         end
+      else
+        global.spiders[player_index][spider_id] = nil
       end
     end
     ::next_player::
