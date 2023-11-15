@@ -537,7 +537,7 @@ local function on_spider_command_completed(event)
         return
       end
       local distance_to_player = distance(player_entity.position, final_destination)
-      if chance < 1 and distance_to_player > 50 then
+      if distance_to_player > 40 then
         if not global.path_requested[spider_id] then
           request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
         end
