@@ -268,7 +268,9 @@ local function abandon_task(spider_id, entity_id, spider, player, player_entity)
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
   spider.color = player.color
-  spider.follow_target = player_entity
+  if player.surface_index == spider.surface_index then
+    spider.follow_target = player_entity
+  end
 end
 
 ---@param spider_id uuid
@@ -286,7 +288,9 @@ local function complete_task(spider_id, entity_id, spider, player, player_entity
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
   spider.color = player.color
-  spider.follow_target = player_entity
+  if player.surface_index == spider.surface_index then
+    spider.follow_target = player_entity
+  end
 end
 
 ---@param event EventData.on_spider_command_completed
@@ -300,11 +304,21 @@ local function on_spider_command_completed(event)
     local task_data = global.tasks.nudges[spider_id]
     if task_data then
       local player = task_data.player
-      local player_entity = get_player_entity(player)
-      spider.color = player.color
-      spider.follow_target = player_entity
-      global.tasks.nudges[spider_id] = nil
-      debug_print("nudge completed", player, spider, color.green)
+      if player and player.valid and player.connected then
+        if player.surface_index == spider.surface_index then
+          local player_entity = get_player_entity(player)
+          spider.color = player.color
+          spider.follow_target = player_entity
+          global.tasks.nudges[spider_id] = nil
+          debug_print("nudge completed", player, spider, color.green)
+        else
+          global.tasks.nudges[spider_id] = nil
+          debug_print("nudge abandoned: player not on same surface", player, spider, color.red)
+        end
+      else
+        global.tasks.nudges[spider_id] = nil
+        debug_print("nudge abandoned: no valid player", player, spider, color.red)
+      end
     else
       task_data = global.tasks.by_spider[spider_id]
       if task_data then
@@ -550,51 +564,55 @@ local function on_script_path_request_finished(event)
     local entity_id = global.spider_path_requests[path_request_id].entity_id
     local player_entity = get_player_entity(player)
     if (spider and spider.valid and entity and entity.valid and player_entity and player_entity.valid) then
+      if spider.surface_index == player.surface_index then
+        local distance_to_task = distance(player.position, entity.position)
+        if distance_to_task < 50 then
+          -- Set the spider's follow target to the player's entity
+          spider.follow_target = player_entity
 
-      -- Set the spider's follow target to the player's entity
-      spider.follow_target = player_entity
+          if path then
+            -- If a path was found, set the spider's autopilot destination to nil and update its color based on the task type
+            spider.autopilot_destination = nil
+            local task_type = global.tasks.by_entity[entity_id].task_type
+            local task_color = (task_type == "deconstruct" and color.red) or (task_type == "revive" and color.blue) or (task_type == "upgrade" and color.green) or color.white
+            spider.color = task_color or color.black
 
-      if path then
-        -- If a path was found, set the spider's autopilot destination to nil and update its color based on the task type
-        spider.autopilot_destination = nil
-        local task_type = global.tasks.by_entity[entity_id].task_type
-        local task_color = (task_type == "deconstruct" and color.red) or (task_type == "revive" and color.blue) or (task_type == "upgrade" and color.green) or color.white
-        spider.color = task_color or color.black
+            -- Add each waypoint in the path as an autopilot destination for the spider
+            for _, waypoint in pairs(path) do
+              spider.add_autopilot_destination(waypoint.position)
+            end
 
-        -- Add each waypoint in the path as an autopilot destination for the spider
-        for _, waypoint in pairs(path) do
-          spider.add_autopilot_destination(waypoint.position)
+            -- Update the task status and draw a line between the spider and the entity
+            global.tasks.by_entity[entity_id].status = "on_the_way"
+            global.tasks.by_spider[spider_id].status = "on_the_way"
+            local render_id = draw_line(spider.surface, entity, spider, task_color)
+            if render_id then
+              global.tasks.by_entity[entity_id].render_ids[render_id] = true
+              global.tasks.by_spider[spider_id].render_ids[render_id] = true
+            end
+
+          else
+            -- If no path was found, add a random nearby destination for the spider autopilot and update the available spiders table
+            if math.random() < 0.125 then
+              spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
+            end
+            local player_index = player.index
+            local surface_index = spider.surface_index
+            global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+            global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+            table.insert(global.available_spiders[player_index][surface_index], spider)
+            spider.color = player.color
+
+            -- Draw dotted lines between the spider and the entity to indicate failure to find a path
+            draw_dotted_line(spider.surface, spider, entity, color.white, 30)
+            draw_dotted_line(spider.surface, spider, entity, color.red, 30, true)
+
+            -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
+            destroy_associated_renderings(spider_id)
+            global.tasks.by_entity[entity_id] = nil
+            global.tasks.by_spider[spider_id] = nil
+          end
         end
-
-        -- Update the task status and draw a line between the spider and the entity
-        global.tasks.by_entity[entity_id].status = "on_the_way"
-        global.tasks.by_spider[spider_id].status = "on_the_way"
-        local render_id = draw_line(spider.surface, entity, spider, task_color)
-        if render_id then
-          global.tasks.by_entity[entity_id].render_ids[render_id] = true
-          global.tasks.by_spider[spider_id].render_ids[render_id] = true
-        end
-
-      else
-        -- If no path was found, add a random nearby destination for the spider autopilot and update the available spiders table
-        if math.random() < 0.125 then
-          spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
-        end
-        local player_index = player.index
-        local surface_index = spider.surface_index
-        global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-        global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-        table.insert(global.available_spiders[player_index][surface_index], spider)
-        spider.color = player.color
-
-        -- Draw dotted lines between the spider and the entity to indicate failure to find a path
-        draw_dotted_line(spider.surface, spider, entity, color.white, 30)
-        draw_dotted_line(spider.surface, spider, entity, color.red, 30, true)
-
-        -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
-        destroy_associated_renderings(spider_id)
-        global.tasks.by_entity[entity_id] = nil
-        global.tasks.by_spider[spider_id] = nil
       end
     end
     global.spider_path_requests[path_request_id] = nil
@@ -607,54 +625,55 @@ local function on_script_path_request_finished(event)
     local spider_id = global.spider_path_to_position_requests[path_request_id].spider_id
     local player_entity = get_player_entity(player)
     if (spider and spider.valid and player_entity and player_entity.valid) then
+      if spider.surface_index == player.surface_index then
+        -- Set the spider's follow target to the player's entity
+        spider.follow_target = player_entity
+        local surface = spider.surface
 
-      -- Set the spider's follow target to the player's entity
-      spider.follow_target = player_entity
-      local surface = spider.surface
-
-      if path then
-        -- If a path was found, set the spider's autopilot destination to nil and draw lines between the spider and each waypoint in the path
-        spider.autopilot_destination = nil
-        local previous_position = spider.position
-        for _, waypoint in pairs(path) do
-          local new_position = waypoint.position
-          spider.add_autopilot_destination(new_position)
-          draw_circle(surface, new_position, color.white, 0.25, 180)
-          if previous_position then
-            draw_line(surface, previous_position, new_position, color.white, 180)
+        if path then
+          -- If a path was found, set the spider's autopilot destination to nil and draw lines between the spider and each waypoint in the path
+          spider.autopilot_destination = nil
+          local previous_position = spider.position
+          for _, waypoint in pairs(path) do
+            local new_position = waypoint.position
+            spider.add_autopilot_destination(new_position)
+            draw_circle(surface, new_position, color.white, 0.25, 180)
+            if previous_position then
+              draw_line(surface, previous_position, new_position, color.white, 180)
+            end
+            previous_position = new_position
           end
-          previous_position = new_position
-        end
 
-        -- Add the task to the nudges table and update its status
-        local render_id = draw_line(spider.surface, final_position, spider, color.white, 10)
-        global.tasks.nudges[spider_id] = {
-          spider = spider,
-          spider_id = spider_id,
-          task_type = "nudge",
-          player = player,
-          entity = player_entity,
-          entity_id = entity_uuid(player_entity),
-          status = "on_the_way",
-          render_ids = {},
-        }
-      else
-        -- If no path was found, add a random autopilot destination for the spider and update the available spiders table
-        if math.random() < 0.125 then
-          spider.add_autopilot_destination(random_position_on_circumference(spider.position, 20))
-        end
-        -- local player_index = player.index
-        -- local surface_index = player.surface_index
-        -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-        -- global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-        -- table.insert(global.available_spiders[player_index][surface_index], spider)
-        spider.color = player.color
+          -- Add the task to the nudges table and update its status
+          local render_id = draw_line(spider.surface, final_position, spider, color.white, 10)
+          global.tasks.nudges[spider_id] = {
+            spider = spider,
+            spider_id = spider_id,
+            task_type = "nudge",
+            player = player,
+            entity = player_entity,
+            entity_id = entity_uuid(player_entity),
+            status = "on_the_way",
+            render_ids = {},
+          }
+        else
+          -- If no path was found, add a random autopilot destination for the spider and update the available spiders table
+          if math.random() < 0.125 then
+            spider.add_autopilot_destination(random_position_on_circumference(spider.position, 20))
+          end
+          -- local player_index = player.index
+          -- local surface_index = player.surface_index
+          -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+          -- global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+          -- table.insert(global.available_spiders[player_index][surface_index], spider)
+          spider.color = player.color
 
-        -- Draw dotted lines between the spider and the start and final positions to indicate failure to find a path
-        draw_dotted_line(surface, spider, start_position, color.white, 30)
-        draw_dotted_line(surface, spider, start_position, color.red, 30, true)
-        draw_dotted_line(surface, start_position, final_position, color.white, 30)
-        draw_dotted_line(surface, start_position, final_position, color.red, 30, true)
+          -- Draw dotted lines between the spider and the start and final positions to indicate failure to find a path
+          draw_dotted_line(surface, spider, start_position, color.white, 30)
+          draw_dotted_line(surface, spider, start_position, color.red, 30, true)
+          draw_dotted_line(surface, start_position, final_position, color.white, 30)
+          draw_dotted_line(surface, start_position, final_position, color.red, 30, true)
+        end
       end
     end
     global.spider_path_to_position_requests[path_request_id] = nil
