@@ -739,6 +739,7 @@ local function on_tick(event)
     if global.previous_controller[player_index] ~= controller_type then
       relink_following_spiders(player)
       global.previous_controller[player_index] = controller_type
+      return
     end
 
     local player_entity = get_player_entity(player)
@@ -750,6 +751,7 @@ local function on_tick(event)
     if global.previous_player_entity[player_index] ~= player_entity_id then
       relink_following_spiders(player)
       global.previous_player_entity[player_index] = player_entity_id
+      return
     end
 
     global.previous_player_color[player_index] = global.previous_player_color[player_index] or player.color
