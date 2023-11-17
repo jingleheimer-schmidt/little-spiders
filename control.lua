@@ -556,8 +556,11 @@ local function on_spider_command_completed(event)
 
       -- if the player is too far away from the spider's final destination, abandon the current task or repath to the final destination (player entity)
       local distance_to_player = distance(player_entity.position, final_destination)
-      if distance_to_player > 40 then
-        if not global.path_requested[spider_id] then
+      local path_requested = global.path_requested[spider_id]
+      if (distance_to_player > 100) and (not path_requested) then
+        if active_task_data then
+          abandon_task(spider_id, active_task_data.entity_id, spider, player)
+        else
           request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
         end
       end
