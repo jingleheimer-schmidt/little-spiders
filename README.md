@@ -4,7 +4,7 @@ https://mods.factorio.com/mod/little-spiders
 
 ---------------------
 # Overview
-This mod adds little spiders who crawl around to fulfill nearby construction orders. 
+This mod adds little spiders that crawl around and fulfill nearby work orders
 
 ---------------------
 # Features
@@ -21,7 +21,8 @@ Little Spiders is a companion mod to:
 [Spider Trails](https://mods.factorio.com/mod/spider-trails)
 
 and is recommended with:
-[Sentient Enhancements](https://mods.factorio.com/mod/sentient-spiders)
+[Sentient Spiders](https://mods.factorio.com/mod/sentient-spiders)
+[Constructron-Continued](https://mods.factorio.com/mod/Constructron-Continued)
 
 ---------------------
 # Compatibility
