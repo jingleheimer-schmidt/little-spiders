@@ -953,7 +953,7 @@ local function on_tick(event)
       if spider.valid then
         local no_speed = spider.speed == 0
         local distance_to_player = distance(spider.position, player.position)
-        local exceeds_distance_limit = distance_to_player > 50
+        local exceeds_distance_limit = distance_to_player > 100
         local active_task = global.tasks.by_spider[spider_id]
         if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
           if not global.path_requested[spider_id] then
