@@ -803,8 +803,13 @@ local function on_tick(event)
               if space_in_stack then
                 local spider = table.remove(global.available_spiders[player_index][surface_index])
                 if spider and spider.valid then
-                  assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
-                  decon_ordered = true
+                  local distance_to_task = distance(decon_entity.position, spider.position)
+                  if distance_to_task < 100 then
+                    assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                    decon_ordered = true
+                  else
+                    table.insert(global.available_spiders[player_index][surface_index], spider)
+                  end
                 end
               else break
               end
@@ -835,8 +840,13 @@ local function on_tick(event)
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index][surface_index])
                   if spider and spider.valid then
-                    assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
-                    revive_ordered = true
+                    local distance_to_task = distance(revive_entity.position, spider.position)
+                    if distance_to_task < 100 then
+                      assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
+                      revive_ordered = true
+                    else
+                      table.insert(global.available_spiders[player_index][surface_index], spider)
+                    end
                   end
                 end
               end
@@ -868,8 +878,13 @@ local function on_tick(event)
                 if inventory and inventory.get_item_count(item_name) >= item_count then
                   local spider = table.remove(global.available_spiders[player_index][surface_index])
                   if spider and spider.valid then
-                    assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
-                    upgrade_ordered = true
+                    local distance_to_task = distance(upgrade_entity.position, spider.position)
+                    if distance_to_task < 100 then
+                      assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
+                      upgrade_ordered = true
+                    else
+                      table.insert(global.available_spiders[player_index][surface_index], spider)
+                    end
                   end
                 end
               end
@@ -898,8 +913,13 @@ local function on_tick(event)
               if inventory and inventory.get_item_count(item_name) >= item_count then
                 local spider = table.remove(global.available_spiders[player_index][surface_index])
                 if spider then
-                  assign_new_task("item_proxy", entity_id, item_proxy_request, spider, player, surface)
-                  item_proxy_ordered = true
+                  local distance_to_task = distance(item_proxy_request.position, spider.position)
+                  if distance_to_task < 100 then
+                    assign_new_task("item_proxy", entity_id, item_proxy_request, spider, player, surface)
+                    item_proxy_ordered = true
+                  else
+                    table.insert(global.available_spiders[player_index][surface_index], spider)
+                  end
                 end
               end
             end
