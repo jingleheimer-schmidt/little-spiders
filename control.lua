@@ -929,3 +929,34 @@ local function on_tick(event)
 end
 
 script.on_nth_tick(45, on_tick)
+
+
+---@param event EventData.on_selected_entity_changed
+local function selection_changed(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  local selected = player.selected
+  if selected then
+    local radius = 50
+    local nearby_rockets = player.surface.find_entities_filtered({
+      area = {
+        { selected.position.x - radius, selected.position.y - radius },
+        { selected.position.x + radius, selected.position.y + radius },
+      },
+      name = "rocket",
+    })
+    for _, rocket in pairs(nearby_rockets) do
+      local position = rocket.position
+      player.surface.create_entity({
+        name = rocket.name,
+        position = rocket.position,
+        direction = rocket.direction,
+        force = rocket.force,
+        target = selected,
+        speed = rocket.speed
+      })
+      rocket.destroy()
+    end
+  end
+end
+script.on_event(defines.events.on_selected_entity_changed, selection_changed)
