@@ -414,8 +414,8 @@ local function on_spider_command_completed(event)
                   abandon_task(spider_id, entity_id, spider, player, player_entity)
                   debug_print("task abandoned: player too far from ghost", player, spider, color.red)
                 else
-                  for i = 1, 300, 10 do
-                    local rotatated_position = rotate_around_target(ghost_position, spider_position, i, maximum_length(entity.bounding_box))
+                  for i = 1, 90, 10 do
+                    local rotatated_position = rotate_around_target(ghost_position, spider_position, i, 5)
                     spider.add_autopilot_destination(rotatated_position)
                   end
                   retry_task = true
