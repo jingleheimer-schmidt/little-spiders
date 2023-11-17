@@ -478,7 +478,7 @@ local function on_spider_command_completed(event)
                 else
                   local upgrade_position = entity.position
                   local spider_position = spider.position
-                  for i = 1, 45, 5 do
+                  for i = 1, 90, 10 do
                     local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, length)
                     spider.add_autopilot_destination(rotatated_position)
                   end
