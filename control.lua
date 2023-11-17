@@ -528,16 +528,21 @@ local function on_spider_command_completed(event)
       local active_task = global.tasks.by_spider[spider_id]
       if active_task then
         debug_print("nudge task abandoned: active task", nudge_task_data.player, spider, color.red)
+      -- if the player isn't valid anymore, clear any tasks associated with it
         return
       end
       local final_destination = destinations[destination_count]
       local player = nudge_task_data.player
+
+      -- if the player doesn't have a valid character, clear any tasks and return it to the player's available spiders table for when they do have a character again
       local player_entity = get_player_entity(player)
       -- Remove nudge task if player is not valid or player entity is not valid
       if not player.valid or not (player_entity and player_entity.valid) then
         global.tasks.nudges[spider_id] = nil
         return
       end
+
+      -- if the player is too far away from the spider's final destination, abandon the current task or repath to the final destination (player entity)
       local distance_to_player = distance(player_entity.position, final_destination)
       if distance_to_player > 40 then
         if not global.path_requested[spider_id] then
@@ -550,10 +555,6 @@ end
 
 script.on_event(defines.events.on_spider_command_completed, on_spider_command_completed)
 
-  --[[ 
-  This function is called when a spider finishes its path request. It updates the spider's status and 
-  performs the necessary actions based on the path request result. 
-  --]]
 ---@param event EventData.on_script_path_request_finished
 local function on_script_path_request_finished(event)
   local path_request_id = event.id
@@ -573,7 +574,7 @@ local function on_script_path_request_finished(event)
           spider.follow_target = player_entity
 
           if path then
-            -- If a path was found, set the spider's autopilot destination to nil and update its color based on the task type
+            -- If a path was found, clear the spider's autopilot destination and update its color based on the task type
             spider.autopilot_destination = nil
             local task_type = global.tasks.by_entity[entity_id].task_type
             local task_color = (task_type == "deconstruct" and color.red) or (task_type == "revive" and color.blue) or (task_type == "upgrade" and color.green) or color.white
