@@ -358,6 +358,7 @@ local function on_spider_command_completed(event)
         end
 
         local retry_task = false
+        local length = 5
 
         if task_type == "deconstruct" then
           local entity_position = entity.position
@@ -415,7 +416,7 @@ local function on_spider_command_completed(event)
                   debug_print("task abandoned: player too far from ghost", player, spider, color.red)
                 else
                   for i = 1, 90, 10 do
-                    local rotatated_position = rotate_around_target(ghost_position, spider_position, i, 5)
+                    local rotatated_position = rotate_around_target(ghost_position, spider_position, i, length)
                     spider.add_autopilot_destination(rotatated_position)
                   end
                   retry_task = true
@@ -477,7 +478,6 @@ local function on_spider_command_completed(event)
                 else
                   local upgrade_position = entity.position
                   local spider_position = spider.position
-                  local length = maximum_length(entity.bounding_box) + 1
                   for i = 1, 45, 5 do
                     local rotatated_position = rotate_around_target(upgrade_position, spider_position, i, length)
                     spider.add_autopilot_destination(rotatated_position)
