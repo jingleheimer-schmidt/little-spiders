@@ -957,13 +957,12 @@ local function on_tick(event)
         local active_task = global.tasks.by_spider[spider_id]
         if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
           if not global.path_requested[spider_id] then
-            if exceeds_distance_limit then
-              nudge_spidertron(spider, spider_id, player)
-              counter = counter + 1
-            end
             if active_task then
               abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
+            elseif exceeds_distance_limit then
+              nudge_spidertron(spider, spider_id, player)
             end
+            counter = counter + 1
           end
         end
       else
