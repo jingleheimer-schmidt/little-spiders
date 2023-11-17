@@ -440,18 +440,30 @@ local function on_spider_command_completed(event)
               local item_name = item_stack.name
               local item_count = item_stack.count or 1
               if inventory.get_item_count(item_name) >= item_count then
-                local entity_type = entity.type
+                -- local current_direction = entity.direction
+                local upgrade_direction = entity.get_upgrade_direction()
+                -- local current_name = entity.name
+                local upgrade_name = upgrade_target.name
+                local type = entity.type
+                local is_ug_belt = (type == "underground-belt")
+                local is_loader = (type == "loader" or type == "loader-1x1")
+                local underground_type = is_ug_belt and entity.belt_to_ground_type
+                local loader_type = is_loader and entity.loader_type
+                -- local opposite_types = { ["input"] = "output", ["output"] = "input" }
+                -- if loader_type and (current_direction == upgrade_direction) and (current_name == upgrade_name) then
+                --   loader_type = opposite_types[loader_type] or loader_type
+                -- end
+                local create_entity_type = underground_type or loader_type or nil
                 ---@diagnostic disable:missing-fields
                 local upgraded_entity = entity.surface.create_entity {
-                  name = upgrade_target.name,
+                  name = upgrade_name,
                   position = entity.position,
-                  direction = entity.get_upgrade_direction(),
+                  direction = upgrade_direction,
                   player = player,
                   fast_replace = true,
                   force = entity.force,
                   spill = true,
-                  type = (entity_type == "underground-belt" and entity.belt_to_ground_type) or
-                  ((entity_type == "loader" or entity_type == "loader-1x1") and entity.loader_type) or nil,
+                  type = create_entity_type,
                   raise_built = true,
                 }
                 ---@diagnostic enable:missing-fields
