@@ -268,6 +268,7 @@ local function abandon_task(spider_id, entity_id, spider, player, player_entity)
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
   spider.color = player.color
+  spider.autopilot_destination = nil
   if player.surface_index == spider.surface_index then
     spider.follow_target = player_entity
   end
@@ -288,6 +289,7 @@ local function complete_task(spider_id, entity_id, spider, player, player_entity
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
   spider.color = player.color
+  spider.autopilot_destination = nil
   if player.surface_index == spider.surface_index then
     spider.follow_target = player_entity
   end
