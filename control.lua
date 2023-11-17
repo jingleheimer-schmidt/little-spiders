@@ -533,24 +533,37 @@ local function on_spider_command_completed(event)
     local chance = math.random()
     if chance < 0.0625 then -- 1/16
       local nudge_task_data = global.tasks.nudges[spider_id]
-      if not nudge_task_data then
-        -- debug_print("nudge task abandoned: no nudge task data", nudge_task_data.player, spider, color.red)
-        return
-      end
-      local active_task = global.tasks.by_spider[spider_id]
-      if active_task then
-        debug_print("nudge task abandoned: active task", nudge_task_data.player, spider, color.red)
-      -- if the player isn't valid anymore, clear any tasks associated with it
+      local active_task_data = global.tasks.by_spider[spider_id]
+      local task_data = active_task_data or nudge_task_data or nil
+      if not task_data then
         return
       end
       local final_destination = destinations[destination_count]
-      local player = nudge_task_data.player
+      local player = task_data.player
+
+      -- if the player isn't valid anymore, clear any tasks associated with it
+      if not (player and player.valid) then
+        local entity_id = active_task_data and active_task_data.entity_id
+        if entity_id then
+          global.tasks.by_entity[entity_id] = nil
+        end
+        global.tasks.nudges[spider_id] = nil
+        global.tasks.by_spider[spider_id] = nil
+        return
+      end
 
       -- if the player doesn't have a valid character, clear any tasks and return it to the player's available spiders table for when they do have a character again
       local player_entity = get_player_entity(player)
-      -- Remove nudge task if player is not valid or player entity is not valid
-      if not player.valid or not (player_entity and player_entity.valid) then
+      if not (player_entity and player_entity.valid) then
         global.tasks.nudges[spider_id] = nil
+        local entity_id = active_task_data and active_task_data.entity_id
+        if entity_id then
+          local player_index = player.index
+          local surface_index = spider.surface_index
+          table.insert(global.available_spiders[player_index][surface_index], spider)
+          global.tasks.by_entity[entity_id] = nil
+          global.tasks.by_spider[spider_id] = nil
+        end
         return
       end
 
