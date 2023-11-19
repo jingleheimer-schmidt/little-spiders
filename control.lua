@@ -789,6 +789,28 @@ local function on_tick(event)
       global.previous_player_color[player_index] = current
     end
 
+    local counter = 0
+    for spider_id, spider in pairs(global.spiders[player_index]) do
+      if spider.valid then
+        local no_speed = spider.speed == 0
+        local distance_to_player = distance(spider.position, player.position)
+        local exceeds_distance_limit = distance_to_player > 100
+        local active_task = global.tasks.by_spider[spider_id]
+        if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
+          if not global.path_requested[spider_id] then
+            if active_task then
+              abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
+            elseif exceeds_distance_limit then
+              nudge_spidertron(spider, spider_id, player)
+            end
+            counter = counter + 1
+          end
+        end
+      else
+        global.spiders[player_index][spider_id] = nil
+      end
+    end
+
     if not global.spiders_enabled[player_index] then goto next_player end
 
     local surface = player_entity.surface
@@ -952,27 +974,6 @@ local function on_tick(event)
       break
     end
 
-    local counter = 0
-    for spider_id, spider in pairs(global.spiders[player_index]) do
-      if spider.valid then
-        local no_speed = spider.speed == 0
-        local distance_to_player = distance(spider.position, player.position)
-        local exceeds_distance_limit = distance_to_player > 100
-        local active_task = global.tasks.by_spider[spider_id]
-        if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
-          if not global.path_requested[spider_id] then
-            if active_task then
-              abandon_task(spider_id, global.tasks.by_spider[spider_id].entity_id, spider, player, player_entity)
-            elseif exceeds_distance_limit then
-              nudge_spidertron(spider, spider_id, player)
-            end
-            counter = counter + 1
-          end
-        end
-      else
-        global.spiders[player_index][spider_id] = nil
-      end
-    end
     ::next_player::
   end
   local entity_task_count = table_size(global.tasks.by_entity)
