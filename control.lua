@@ -853,7 +853,7 @@ local function on_tick(event)
     local upgrade_ordered = false
     local item_proxy_ordered = false
     local spiders_dispatched = 0
-    local max_spiders_dispatched = 9
+    local max_spiders_dispatched = 50
 
     if #global.available_spiders[player_index][surface_index] > 0 then
       if max_spiders_dispatched then
