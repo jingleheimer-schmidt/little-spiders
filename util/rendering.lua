@@ -73,18 +73,18 @@ end
 ---@param color Color?
 local function debug_print(message, player, entity, color)
     if not global.debug then return end
-    color = color or {}
-    color.r = color.r or 1
-    color.g = color.g or 1
-    color.b = color.b or 1
-    color.a = color.a or 1
-    message = string.format("[color=%d,%d,%d,%d]%s[/color]", color.r, color.g, color.b, color.a, message)
-    player.create_local_flying_text({
-        text = message,
-        position = entity.position,
-        color = {r = 1, g = 1, b = 1},
-        time_to_live = 180,
-    })
+    -- color = color or {}
+    -- color.r = color.r or 1
+    -- color.g = color.g or 1
+    -- color.b = color.b or 1
+    -- color.a = color.a or 1
+    -- message = string.format("[color=%d,%d,%d,%d]%s[/color]", color.r, color.g, color.b, color.a, message)
+    -- player.create_local_flying_text({
+    --     text = message,
+    --     position = entity.position,
+    --     color = {r = 1, g = 1, b = 1},
+    --     time_to_live = 180,
+    -- })
 end
 
 ---@param spider_id uuid
