@@ -855,8 +855,8 @@ local function on_tick(event)
     local spiders_dispatched = 0
     local max_spiders_dispatched = 9
 
-    while #global.available_spiders[player_index][surface_index] > 0 do
-      if not upgrade_ordered then
+    if #global.available_spiders[player_index][surface_index] > 0 then
+      if max_spiders_dispatched then
         local entity_count = #to_be_deconstructed
         for i = 1, entity_count do
           if spiders_dispatched >= max_spiders_dispatched then break end
@@ -1017,7 +1017,6 @@ local function on_tick(event)
           end
         end
       end
-      break
     end
 
     ::next_player::
