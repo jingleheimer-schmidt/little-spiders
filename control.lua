@@ -173,6 +173,7 @@ local function relink_following_spiders(player)
           if not (entity and entity.valid) then
             global.tasks.by_entity[entity_id] = nil
             global.tasks.by_spider[spider_id] = nil
+            -- table.insert(global.available_spiders[player_index][spider.surface_index], spider)
           end
         end
       end
@@ -1019,11 +1020,11 @@ local function on_tick(event)
 
     ::next_player::
   end
-  local entity_task_count = table_size(global.tasks.by_entity)
-  local spider_task_count = table_size(global.tasks.by_spider)
-  if entity_task_count ~= spider_task_count then
-    game.print("Little Spiders: task count mismatch: " .. entity_task_count .. " entity tasks, " .. spider_task_count .. " spider tasks", { sound = defines.print_sound.never})
-  end
+  -- local entity_task_count = table_size(global.tasks.by_entity)
+  -- local spider_task_count = table_size(global.tasks.by_spider)
+  -- if entity_task_count ~= spider_task_count then
+  --   game.print("Little Spiders: task count mismatch: " .. entity_task_count .. " entity tasks, " .. spider_task_count .. " spider tasks", { sound = defines.print_sound.never})
+  -- end
 end
 
 script.on_nth_tick(45, on_tick)
