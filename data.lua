@@ -70,3 +70,23 @@ little_spider_item.name = "little-spidertron"
 little_spider_item.place_result = "little-spidertron"
 -- little_spider_item.icon_size = little_spider_item.icon_size * 4
 data:extend{little_spider_item}
+
+local toggle_little_spiders_shortcut = {
+    type = "shortcut",
+    name = "toggle-little-spiders",
+    action = "lua",
+    associated_control_input = "toggle-little-spiders",
+    icon = {filename = "__little-spiders__/assets/targeted.png", size = 1024},
+    -- disabled_icon = {filename = "__little-spiders__/assets/spider-face-trans.png", size = 1024},
+    toggleable = true,
+}
+data:extend({toggle_little_spiders_shortcut})
+
+local toggle_little_spiders_hotkey = {
+    type = "custom-input",
+    name = "toggle-little-spiders",
+    key_sequence = "ALT + S",
+    -- alternative_key_sequence = "COMMAND + S",
+    action = "lua",
+}
+data:extend({toggle_little_spiders_hotkey})

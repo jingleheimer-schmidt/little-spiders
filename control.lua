@@ -52,6 +52,7 @@ local function on_init()
   global.previous_player_entity = {} --[[@type table<integer, uuid>]]
   global.previous_player_color = {} --[[@type table<integer, Color>]]
   global.path_requested = {} --[[@type table<uuid, boolean>]]
+  global.spiders_enabled = {} --[[@type table<integer, boolean>]]
   add_commands()
 end
 
@@ -69,6 +70,7 @@ local function on_configuration_changed(event)
   global.previous_player_entity = global.previous_player_entity or {}
   global.previous_player_color = global.previous_player_color or {}
   global.path_requested = global.path_requested or {}
+  global.spiders_enabled = global.spiders_enabled or {}
 end
 
 script.on_init(on_init)
@@ -787,6 +789,8 @@ local function on_tick(event)
       global.previous_player_color[player_index] = current
     end
 
+    if not global.spiders_enabled[player_index] then goto next_player end
+
     local surface = player_entity.surface
     local inventory = player.get_main_inventory()
     local character_position_x = player_entity.position.x
@@ -979,3 +983,16 @@ local function on_tick(event)
 end
 
 script.on_nth_tick(45, on_tick)
+
+--- turn selection highlighting on or off
+---@param event EventData.on_lua_shortcut | EventData.CustomInputEvent
+local function toggle_little_spiders(event)
+	local name = event.prototype_name or event.input_name
+	if name ~= "toggle-little-spiders" then return end
+	local player_index = event.player_index
+	global.spiders_enabled[player_index] = not global.spiders_enabled[player_index]
+	game.get_player(player_index).set_shortcut_toggled("toggle-little-spiders", global.spiders_enabled[player_index])
+end
+
+script.on_event("toggle-little-spiders", toggle_little_spiders)
+script.on_event(defines.events.on_lua_shortcut, toggle_little_spiders)
