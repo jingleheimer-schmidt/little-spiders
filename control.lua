@@ -844,10 +844,6 @@ local function on_tick(event)
       { character_position_x - 20, character_position_y - 20 },
       { character_position_x + 20, character_position_y + 20 },
     }
-    local to_be_deconstructed = surface.find_entities_filtered({
-      area = area,
-      to_be_deconstructed = true,
-    })
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
@@ -857,6 +853,10 @@ local function on_tick(event)
 
     if #global.available_spiders[player_index][surface_index] > 0 then
       if max_spiders_dispatched then
+        local to_be_deconstructed = surface.find_entities_filtered({
+          area = area,
+          to_be_deconstructed = true,
+        })
         local entity_count = #to_be_deconstructed
         for i = 1, entity_count do
           if spiders_dispatched >= max_spiders_dispatched then break end
