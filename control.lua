@@ -849,11 +849,14 @@ local function on_tick(event)
     local revive_ordered = false
     local upgrade_ordered = false
     local item_proxy_ordered = false
+    local spiders_dispatched = 0
+    local max_spiders_dispatched = 9
 
     while #global.available_spiders[player_index][surface_index] > 0 do
       if not upgrade_ordered then
         local entity_count = #to_be_deconstructed
         for i = 1, entity_count do
+          if spiders_dispatched >= max_spiders_dispatched then break end
           local index = math.random(1, entity_count)
           local decon_entity = to_be_deconstructed[index]
           if decon_entity then
@@ -870,6 +873,7 @@ local function on_tick(event)
                   local distance_to_task = distance(decon_entity.position, spider.position)
                   if distance_to_task < 100 then
                     assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                    spiders_dispatched = spiders_dispatched + 1
                     decon_ordered = true
                   else
                     table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -882,6 +886,7 @@ local function on_tick(event)
                     local distance_to_task = distance(decon_entity.position, spider.position)
                     if distance_to_task < 100 then
                       assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                      spiders_dispatched = spiders_dispatched + 1
                       decon_ordered = true
                     else
                       table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -903,6 +908,7 @@ local function on_tick(event)
         })
         local entity_count = #to_be_revived
         for i = 1, entity_count do
+          if spiders_dispatched >= max_spiders_dispatched then break end
           local index = math.random(1, entity_count)
           local revive_entity = to_be_revived[index]
           if revive_entity then
@@ -920,6 +926,7 @@ local function on_tick(event)
                     local distance_to_task = distance(revive_entity.position, spider.position)
                     if distance_to_task < 100 then
                       assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
+                      spiders_dispatched = spiders_dispatched + 1
                       revive_ordered = true
                     else
                       table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -940,6 +947,7 @@ local function on_tick(event)
         })
         local entity_count = #to_be_upgraded
         for i = 1, entity_count do
+          if spiders_dispatched >= max_spiders_dispatched then break end
           local index = math.random(1, entity_count)
           local upgrade_entity = to_be_upgraded[index]
           if upgrade_entity then
@@ -958,6 +966,7 @@ local function on_tick(event)
                     local distance_to_task = distance(upgrade_entity.position, spider.position)
                     if distance_to_task < 100 then
                       assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
+                      spiders_dispatched = spiders_dispatched + 1
                       upgrade_ordered = true
                     else
                       table.insert(global.available_spiders[player_index][surface_index], spider)
@@ -993,6 +1002,7 @@ local function on_tick(event)
                   local distance_to_task = distance(item_proxy_request.position, spider.position)
                   if distance_to_task < 100 then
                     assign_new_task("item_proxy", entity_id, item_proxy_request, spider, player, surface)
+                    spiders_dispatched = spiders_dispatched + 1
                     item_proxy_ordered = true
                   else
                     table.insert(global.available_spiders[player_index][surface_index], spider)
