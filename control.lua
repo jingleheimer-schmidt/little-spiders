@@ -385,6 +385,26 @@ local function on_spider_command_completed(event)
               global.tasks.by_spider[spider_id].status = "completed"
               complete_task(spider_id, entity_id, spider, player, player_entity)
               debug_print("deconstruct task completed", player, spider, color.green)
+            elseif (entity.type == "cliff") then
+              if inventory and inventory.get_item_count("cliff-explosives") > 0 then
+                spider.surface.create_entity {
+                  name = "cliff-explosives",
+                  position = spider.position,
+                  target = entity_position,
+                  force = player.force,
+                  raise_built = true,
+                  speed = 0.125,
+                }
+                inventory.remove({ name = "cliff-explosives", count = 1 })
+                draw_line(spider.surface, player_entity, spider, player.color, 20)
+                global.tasks.by_entity[entity_id].status = "completed"
+                global.tasks.by_spider[spider_id].status = "completed"
+                complete_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("deconstruct task completed", player, spider, color.green)
+              else
+                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                debug_print("task abandoned: no cliff explosives", player, spider, color.red)
+              end
             else
               abandon_task(spider_id, entity_id, spider, player, player_entity)
               debug_print("task abandoned: no space in inventory", player, spider, color.red)
@@ -853,6 +873,19 @@ local function on_tick(event)
                     decon_ordered = true
                   else
                     table.insert(global.available_spiders[player_index][surface_index], spider)
+                  end
+                end
+              elseif (decon_entity.type == "cliff") then
+                if inventory and inventory.get_item_count("cliff-explosives") > 0 then
+                  local spider = table.remove(global.available_spiders[player_index][surface_index])
+                  if spider and spider.valid then
+                    local distance_to_task = distance(decon_entity.position, spider.position)
+                    if distance_to_task < 100 then
+                      assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                      decon_ordered = true
+                    else
+                      table.insert(global.available_spiders[player_index][surface_index], spider)
+                    end
                   end
                 end
               else break
