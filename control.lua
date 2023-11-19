@@ -388,6 +388,7 @@ local function on_spider_command_completed(event)
               debug_print("deconstruct task completed", player, spider, color.green)
             elseif (entity.type == "cliff") then
               if inventory and inventory.get_item_count("cliff-explosives") > 0 then
+                ---@diagnostic disable:missing-fields
                 spider.surface.create_entity {
                   name = "cliff-explosives",
                   position = spider.position,
@@ -396,6 +397,7 @@ local function on_spider_command_completed(event)
                   raise_built = true,
                   speed = 0.125,
                 }
+                ---@diagnostic enable:missing-fields
                 inventory.remove({ name = "cliff-explosives", count = 1 })
                 draw_line(spider.surface, player_entity, spider, player.color, 20)
                 global.tasks.by_entity[entity_id].status = "completed"
