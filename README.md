@@ -32,3 +32,4 @@ There are currently no known mod compatibility issues. To report a compatibility
 # License
 Little Spiders © 2023 by asher_sky is licensed under Attribution-NonCommercial-ShareAlike 4.0 International.
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
+[Spider](https://icons8.com/icon/d4fPEYVFaamW/spider) icon by [Icons8](https://icons8.com)

@@ -76,7 +76,8 @@ local toggle_little_spiders_shortcut = {
     name = "toggle-little-spiders",
     action = "lua",
     associated_control_input = "toggle-little-spiders",
-    icon = {filename = "__little-spiders__/assets/targeted.png", size = 1024},
+    -- icon = {filename = "__little-spiders__/assets/targeted.png", size = 1024},
+    icon = {filename = "__little-spiders__/assets/icons8-spider-67.png", size = 67},
     -- disabled_icon = {filename = "__little-spiders__/assets/spider-face-trans.png", size = 1024},
     toggleable = true,
 }
