@@ -1027,7 +1027,7 @@ local function on_tick(event)
   -- end
 end
 
-script.on_nth_tick(45, on_tick)
+script.on_nth_tick(15, on_tick)
 
 --- turn selection highlighting on or off
 ---@param event EventData.on_lua_shortcut | EventData.CustomInputEvent
