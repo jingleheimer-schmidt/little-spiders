@@ -648,8 +648,16 @@ local function on_script_path_request_finished(event)
             spider.color = task_color or color.black
 
             -- Add each waypoint in the path as an autopilot destination for the spider
+            local previous_position = spider.position
             for _, waypoint in pairs(path) do
-              spider.add_autopilot_destination(waypoint.position)
+              local waypoint_position = waypoint.position
+              spider.add_autopilot_destination(waypoint_position)
+              if global.debug then
+                draw_circle(surface, waypoint.position, task_color, 0.25, 180)
+                if previous_position then
+                  draw_line(surface, previous_position, waypoint_position, task_color, 180)
+                end
+              end
             end
 
             -- Update the task status and draw a line between the spider and the entity
@@ -662,25 +670,27 @@ local function on_script_path_request_finished(event)
             end
 
           else
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
             -- If no path was found, add a random nearby destination for the spider autopilot and update the available spiders table
             if math.random() < 0.125 then
               spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
             end
-            local player_index = player.index
-            local surface_index = spider.surface_index
-            global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-            global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-            table.insert(global.available_spiders[player_index][surface_index], spider)
-            spider.color = player.color
+            -- local player_index = player.index
+            -- local surface_index = spider.surface_index
+            -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+            -- global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+            -- table.insert(global.available_spiders[player_index][surface_index], spider)
+            -- spider.color = player.color
 
             -- Draw dotted lines between the spider and the entity to indicate failure to find a path
-            draw_dotted_line(spider.surface, spider, entity, color.white, 30)
-            draw_dotted_line(spider.surface, spider, entity, color.red, 30, true)
+            local surface = spider.surface
+            draw_dotted_line(surface, spider, entity, color.white, 30)
+            draw_dotted_line(surface, spider, entity, color.red, 30, true)
 
-            -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
-            destroy_associated_renderings(spider_id)
-            global.tasks.by_entity[entity_id] = nil
-            global.tasks.by_spider[spider_id] = nil
+            -- -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
+            -- destroy_associated_renderings(spider_id)
+            -- global.tasks.by_entity[entity_id] = nil
+            -- global.tasks.by_spider[spider_id] = nil
           end
         end
       end
@@ -703,15 +713,18 @@ local function on_script_path_request_finished(event)
         if path then
           -- If a path was found, set the spider's autopilot destination to nil and draw lines between the spider and each waypoint in the path
           spider.autopilot_destination = nil
-          local previous_position = spider.position
-          for _, waypoint in pairs(path) do
-            local new_position = waypoint.position
-            spider.add_autopilot_destination(new_position)
-            draw_circle(surface, new_position, color.white, 0.25, 180)
-            if previous_position then
-              draw_line(surface, previous_position, new_position, color.white, 180)
+          if global.debug then
+            local previous_position = spider.position
+            local spider_color = spider.color
+            for _, waypoint in pairs(path) do
+              local new_position = waypoint.position
+              spider.add_autopilot_destination(new_position)
+              draw_circle(surface, new_position, color.white, 0.25, 180)
+              if previous_position then
+                draw_line(surface, previous_position, new_position, color.white, 180)
+              end
+              previous_position = new_position
             end
-            previous_position = new_position
           end
 
           -- Add the task to the nudges table and update its status
