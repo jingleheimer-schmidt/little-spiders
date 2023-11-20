@@ -86,6 +86,13 @@ local function get_player_entity(player)
   return player.character or player.vehicle or nil
 end
 
+---@return string
+local function random_backer_name()
+  local backer_names = game.backer_names
+  local index = math.random(#backer_names)
+  return backer_names[index]
+end
+
 ---@param event EventData.on_built_entity
 local function on_spider_created(event)
   local spider = event.created_entity
@@ -105,6 +112,10 @@ local function on_spider_created(event)
       global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
       table.insert(global.available_spiders[player_index][surface_index], spider)
     end
+  end
+
+  if not spider.entity_label then
+    spider.entity_label = random_backer_name()
   end
 end
 
