@@ -22,7 +22,7 @@ if legs[1] then
     for _, leg in pairs(legs) do
         for _, trigger in pairs(leg.leg_hit_the_ground_trigger) do
             trigger.repeat_count = 1
-            trigger.probability = 0.125
+            trigger.probability = 0.0125
         end
         local leg_name = leg.leg
         local leg_prototype = data.raw["spider-leg"][leg_name]
