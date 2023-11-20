@@ -1,8 +1,8 @@
 {
 	"name": "little-spiders",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"title": "Little Spiders",
-	"description": "",
+	"description": "A loyal prototype spidertron that follows you around. It can deconstruct nearby orders, build blueprints, and perform upgrades using your inventory.\nToggle work order processing: Alt + S",
 	"author": "asher_sky",
 	"dependencies": ["base"],
 	"factorio_version": "1.1"
