@@ -1,10 +1,10 @@
 
 local little_spider_arguments = {
     scale = 0.25,
-    leg_scale = 0.77,
+    leg_scale = 0.82,
     name = "little-spidertron",
     leg_thickness = 1.44,
-    leg_movement_speed = 3.66,
+    leg_movement_speed = 2.5,
 }
 create_spidertron(little_spider_arguments)
 local little_spider_entity = data.raw["spider-vehicle"]["little-spidertron"]
