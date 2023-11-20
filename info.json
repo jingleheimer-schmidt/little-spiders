@@ -1,7 +1,7 @@
 {
 	"name": "little-spiders",
 	"version": "0.0.10",
-	"title": "Little Spidertrons",
+	"title": "Little Spiders",
 	"description": "",
 	"author": "asher_sky",
 	"dependencies": ["base"],
