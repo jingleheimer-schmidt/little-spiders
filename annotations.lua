@@ -1,5 +1,5 @@
 
----@class task_data
+---@class entity_task_data
 ---@field entity LuaEntity
 ---@field entity_id uuid
 ---@field spider LuaEntity

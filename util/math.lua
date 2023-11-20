@@ -73,8 +73,8 @@ local function random_position_on_circumference(center, radius)
     return {x = x, y = y}
 end
 
----@param pos_1 MapPosition
----@param pos_2 MapPosition
+---@param pos_1 MapPosition | TilePosition
+---@param pos_2 MapPosition | TilePosition
 ---@return number
 local function distance(pos_1, pos_2)
     local x_1 = pos_1.x

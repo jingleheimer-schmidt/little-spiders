@@ -3,6 +3,7 @@
 
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
+local tile_uuid = general_util.tile_uuid
 local new_task_id = general_util.new_task_id
 
 local color_util = require("util/colors")
@@ -41,9 +42,10 @@ local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
   global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity[]>>]]
   global.tasks = {
-    by_entity = {}, --[[@type table<uuid, task_data>]]
-    by_spider = {}, --[[@type table<uuid, task_data>]]
-    nudges = {}, --[[@type table<uuid, task_data>]]
+    by_entity = {}, --[[@type table<uuid, entity_task_data>]]
+    by_spider = {}, --[[@type table<uuid, entity_task_data>]]
+    by_tile = {}, --[[@type table<uuid, entity_task_data>]]
+    nudges = {}, --[[@type table<uuid, entity_task_data>]]
   }
   global.spider_path_requests = {} --[[@type table<integer, path_request_data>]]
   global.spider_path_to_position_requests = {} --[[@type table<integer, position_path_request_data>]]
@@ -62,6 +64,7 @@ local function on_configuration_changed(event)
   global.tasks = global.tasks or {}
   global.tasks.by_entity = global.tasks.by_entity or {}
   global.tasks.by_spider = global.tasks.by_spider or {}
+  global.tasks.by_tile = global.tasks.by_tile or {}
   global.tasks.nudges = global.tasks.nudges or {}
   global.spider_path_requests = global.spider_path_requests or {}
   global.spider_path_to_position_requests = global.spider_path_to_position_requests or {}
@@ -740,12 +743,12 @@ end
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
 ---@param type string
----@param entity_id string|integer
+---@param entity_id uuid
 ---@param entity LuaEntity
 ---@param spider LuaEntity
 ---@param player LuaPlayer
 ---@param surface LuaSurface
-local function assign_new_task(type, entity_id, entity, spider, player, surface)
+local function new_entity_task(type, entity_id, entity, spider, player, surface)
   local spider_id = entity_uuid(spider)
   spider.color = color.white
   request_spider_path_to_entity(surface, spider_id, spider, entity_id, entity, player)
@@ -762,9 +765,32 @@ local function assign_new_task(type, entity_id, entity, spider, player, surface)
   global.tasks.by_entity[entity_id] = task_data
   global.tasks.by_spider[spider_id] = task_data
   global.tasks.nudges[spider_id] = nil
-
-  debug_print("task assigned", player, spider)
 end
+
+-- ---@param type string
+-- ---@param tile_id uuid
+-- ---@param tile LuaTile
+-- ---@param spider LuaEntity
+-- ---@param player LuaPlayer
+-- ---@param surface LuaSurface
+-- local function new_tile_task(type, tile_id, tile, spider, player, surface)
+--   local spider_id = entity_uuid(spider)
+--   spider.color = color.white
+--   request_spider_path_to_tile(surface, spider_id, spider, tile_id, tile, player)
+--   local task_data = {
+--     tile = tile,
+--     tile_id = tile_id,
+--     spider = spider,
+--     spider_id = spider_id,
+--     task_type = type,
+--     player = player,
+--     status = "path_requested",
+--     render_ids = {},
+--   }
+--   global.tasks.by_tile[tile_id] = task_data
+--   global.tasks.by_spider[spider_id] = task_data
+--   global.tasks.nudges[spider_id] = nil
+-- end
 
 ---@param event EventData.on_tick
 local function on_tick(event)
@@ -836,187 +862,266 @@ local function on_tick(event)
 
     if not global.spiders_enabled[player_index] then goto next_player end
 
-    local surface = player_entity.surface
     local inventory = player.get_main_inventory()
+    if not (inventory and inventory.valid) then goto next_player end
+
+    local player_force = player.force
+    local surface = player_entity.surface
     local character_position_x = player_entity.position.x
     local character_position_y = player_entity.position.y
     local area = {
       { character_position_x - 20, character_position_y - 20 },
       { character_position_x + 20, character_position_y + 20 },
     }
+    local decon_entities = nil
+    local revive_entities = nil
+    local upgrade_entities = nil
+    local item_proxy_entities = nil
+    local decon_tiles = nil
+    local revive_tiles = nil
     local decon_ordered = false
     local revive_ordered = false
     local upgrade_ordered = false
     local item_proxy_ordered = false
+    local tile_decon_ordered = false
+    local tile_reivive_ordered = false
     local spiders_dispatched = 0
     local max_spiders_dispatched = 50
+    local max_distance_to_task = 100
 
-    if #global.available_spiders[player_index][surface_index] > 0 then
-      if max_spiders_dispatched then
-        local to_be_deconstructed = surface.find_entities_filtered({
-          area = area,
-          to_be_deconstructed = true,
-        })
-        local entity_count = #to_be_deconstructed
-        for i = 1, entity_count do
-          if spiders_dispatched >= max_spiders_dispatched then break end
-          local index = math.random(1, entity_count)
-          local decon_entity = to_be_deconstructed[index]
-          if decon_entity then
-            if #global.available_spiders[player_index][surface_index] == 0 then break end
-            local entity_id = entity_uuid(decon_entity)
-            if not global.tasks.by_entity[entity_id] then
-              local prototype = decon_entity.prototype
-              local products = prototype and prototype.mineable_properties.products
-              local result_when_mined = (decon_entity.type == "item-entity" and decon_entity.stack) or (products and products[1] and products[1].name) or nil
-              local space_in_stack = result_when_mined and inventory and inventory.can_insert(result_when_mined)
-              if space_in_stack then
-                local spider = table.remove(global.available_spiders[player_index][surface_index])
-                if spider and spider.valid then
-                  local distance_to_task = distance(decon_entity.position, spider.position)
-                  if distance_to_task < 100 then
-                    assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
-                    spiders_dispatched = spiders_dispatched + 1
-                    decon_ordered = true
-                  else
-                    table.insert(global.available_spiders[player_index][surface_index], spider)
-                  end
-                end
-              elseif (decon_entity.type == "cliff") then
-                if inventory and inventory.get_item_count("cliff-explosives") > 0 then
-                  local spider = table.remove(global.available_spiders[player_index][surface_index])
-                  if spider and spider.valid then
-                    local distance_to_task = distance(decon_entity.position, spider.position)
-                    if distance_to_task < 100 then
-                      assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
-                      spiders_dispatched = spiders_dispatched + 1
-                      decon_ordered = true
-                    else
-                      table.insert(global.available_spiders[player_index][surface_index], spider)
-                    end
-                  end
-                end
-              else break
-              end
-            end
-            to_be_deconstructed[index] = nil
-          end
+    for spider_index, spider in pairs(global.available_spiders[player_index][surface_index]) do
+      if not (spider and spider.valid) then
+        global.available_spiders[player_index][surface_index][spider_index] = nil
+        goto next_spider
+      end
+
+      decon_entities = decon_entities or surface.find_entities_filtered({
+        area = area,
+        to_be_deconstructed = true,
+      })
+      local decon_entity_count = #decon_entities
+      for i = 1, decon_entity_count do
+        local entity_index = math.random(1, decon_entity_count)
+        local decon_entity = decon_entities[entity_index] ---@type LuaEntity
+        if not (decon_entity and decon_entity.valid) then
+          table.remove(decon_entities, entity_index)
+          goto next_entity
         end
+        local entity_id = entity_uuid(decon_entity)
+        if not global.tasks.by_entity[entity_id] then
+          local prototype = decon_entity.prototype
+          local products = prototype and prototype.mineable_properties.products
+          local result_when_mined = (decon_entity.type == "item-entity" and decon_entity.stack) or (products and products[1] and products[1].name) or nil
+          local space_for_result = result_when_mined and inventory.can_insert(result_when_mined)
+          if space_for_result then
+            local distance_to_task = distance(decon_entity.position, spider.position)
+            if distance_to_task < max_distance_to_task then
+              new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+              table.remove(global.available_spiders[player_index][surface_index], spider_index)
+              spiders_dispatched = spiders_dispatched + 1
+              decon_ordered = true
+              goto next_spider
+            else
+              goto next_spider
+            end
+          elseif (decon_entity.type == "cliff") then
+            if inventory.get_item_count("cliff-explosives") > 0 then
+              local distance_to_task = distance(decon_entity.position, spider.position)
+              if distance_to_task < max_distance_to_task then
+                new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                global.available_spiders[player_index][surface_index][spider_index] = nil
+                spiders_dispatched = spiders_dispatched + 1
+                decon_ordered = true
+                goto next_spider
+              else
+                goto next_spider
+              end
+            else
+              table.remove(decon_entities, entity_index)
+            end
+          else
+            table.remove(decon_entities, entity_index)
+          end
+        else
+          table.remove(decon_entities, entity_index)
+        end
+        ::next_entity::
       end
 
       if not decon_ordered then
-        local to_be_revived = surface.find_entities_filtered({
+        revive_entities = revive_entities or surface.find_entities_filtered({
           area = area,
-          type = "entity-ghost",
+          type = "entity-ghost", -- also add force = player.force?
         })
-        local entity_count = #to_be_revived
-        for i = 1, entity_count do
-          if spiders_dispatched >= max_spiders_dispatched then break end
-          local index = math.random(1, entity_count)
-          local revive_entity = to_be_revived[index]
-          if revive_entity then
-            if #global.available_spiders[player_index][surface_index] == 0 then break end
-            local entity_id = entity_uuid(revive_entity)
-            if not global.tasks.by_entity[entity_id] then
-              local items = revive_entity.ghost_prototype.items_to_place_this
-              local item_stack = items and items[1]
-              if item_stack then
-                local item_name = item_stack.name
-                local item_count = item_stack.count or 1
-                if inventory and inventory.get_item_count(item_name) >= item_count then
-                  local spider = table.remove(global.available_spiders[player_index][surface_index])
-                  if spider and spider.valid then
-                    local distance_to_task = distance(revive_entity.position, spider.position)
-                    if distance_to_task < 100 then
-                      assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
-                      spiders_dispatched = spiders_dispatched + 1
-                      revive_ordered = true
-                    else
-                      table.insert(global.available_spiders[player_index][surface_index], spider)
-                    end
-                  end
-                end
-              end
-            end
-            to_be_revived[index] = nil
+        local revive_entity_count = #revive_entities
+        for i = 1, revive_entity_count do
+          local entity_index = math.random(1, revive_entity_count)
+          local revive_entity = revive_entities[entity_index] ---@type LuaEntity
+          if not (revive_entity and revive_entity.valid) then
+            table.remove(revive_entities, entity_index)
+            goto next_entity
           end
+          local entity_id = entity_uuid(revive_entity)
+          if not global.tasks.by_entity[entity_id] then
+            local items = revive_entity.ghost_prototype.items_to_place_this
+            local item_stack = items and items[1]
+            if item_stack then
+              local item_name = item_stack.name
+              local item_count = item_stack.count or 1
+              if inventory.get_item_count(item_name) >= item_count then
+                local distance_to_task = distance(revive_entity.position, spider.position)
+                if distance_to_task < max_distance_to_task then
+                  new_entity_task("revive", entity_id, revive_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
+                  spiders_dispatched = spiders_dispatched + 1
+                  revive_ordered = true
+                  goto next_spider
+                else
+                  goto next_spider
+                end
+              else
+                table.remove(revive_entities, entity_index)
+              end
+            else
+              table.remove(revive_entities, entity_index)
+            end
+          else
+            table.remove(revive_entities, entity_index)
+          end
+          ::next_entity::
         end
       end
 
       if not revive_ordered then
-        local to_be_upgraded = surface.find_entities_filtered({
+        upgrade_entities = upgrade_entities or surface.find_entities_filtered({
           area = area,
           to_be_upgraded = true,
         })
-        local entity_count = #to_be_upgraded
-        for i = 1, entity_count do
-          if spiders_dispatched >= max_spiders_dispatched then break end
-          local index = math.random(1, entity_count)
-          local upgrade_entity = to_be_upgraded[index]
-          if upgrade_entity then
-            if #global.available_spiders[player_index][surface_index] == 0 then break end
-            local entity_id = entity_uuid(upgrade_entity)
-            if not global.tasks.by_entity[entity_id] then
-              local upgrade_target = upgrade_entity.get_upgrade_target()
-              local items = upgrade_target and upgrade_target.items_to_place_this
-              local item_stack = items and items[1]
-              if upgrade_target and item_stack then
-                local item_name = item_stack.name
-                local item_count = item_stack.count or 1
-                if inventory and inventory.get_item_count(item_name) >= item_count then
-                  local spider = table.remove(global.available_spiders[player_index][surface_index])
-                  if spider and spider.valid then
-                    local distance_to_task = distance(upgrade_entity.position, spider.position)
-                    if distance_to_task < 100 then
-                      assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
-                      spiders_dispatched = spiders_dispatched + 1
-                      upgrade_ordered = true
-                    else
-                      table.insert(global.available_spiders[player_index][surface_index], spider)
-                    end
-                  end
-                end
-              end
-            end
-            to_be_upgraded[index] = nil
+        local upgrade_entity_count = #upgrade_entities
+        for i = 1, upgrade_entity_count do
+          local entity_index = math.random(1, upgrade_entity_count)
+          local upgrade_entity = upgrade_entities[entity_index] ---@type LuaEntity
+          if not (upgrade_entity and upgrade_entity.valid) then
+            table.remove(upgrade_entities, entity_index)
+            goto next_entity
           end
+          local entity_id = entity_uuid(upgrade_entity)
+          if not global.tasks.by_entity[entity_id] then
+            local upgrade_target = upgrade_entity.get_upgrade_target()
+            local items = upgrade_target and upgrade_target.items_to_place_this
+            local item_stack = items and items[1]
+            if upgrade_target and item_stack then
+              local item_name = item_stack.name
+              local item_count = item_stack.count or 1
+              if inventory.get_item_count(item_name) >= item_count then
+                local distance_to_task = distance(upgrade_entity.position, spider.position)
+                if distance_to_task < max_distance_to_task then
+                  new_entity_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
+                  spiders_dispatched = spiders_dispatched + 1
+                  upgrade_ordered = true
+                  goto next_spider
+                else
+                  goto next_spider
+                end
+              else
+                table.remove(upgrade_entities, entity_index)
+              end
+            else
+              table.remove(upgrade_entities, entity_index)
+            end
+          else
+            table.remove(upgrade_entities, entity_index)
+          end
+          ::next_entity::
         end
       end
 
       if not upgrade_ordered then
-        local item_proxy_requests = surface.find_entities_filtered({
+        item_proxy_entities = item_proxy_entities or surface.find_entities_filtered({
           area = area,
           type = "item-request-proxy",
         })
-        local entity_count = #item_proxy_requests
-        for i = 1, entity_count do
-          local index = math.random(1, entity_count)
-          local item_proxy_request = item_proxy_requests[index]
-          if item_proxy_request then
-            if #global.available_spiders[player_index][surface_index] == 0 then break end
-            local entity_id = entity_uuid(item_proxy_request)
-            if not global.tasks.by_entity[entity_id] then
-              local proxy_target = item_proxy_request.proxy_target
-              local items = item_proxy_request.item_requests
-              local item_name, item_count = next(items)
-              if inventory and inventory.get_item_count(item_name) >= item_count then
-                local spider = table.remove(global.available_spiders[player_index][surface_index])
-                if spider then
-                  local distance_to_task = distance(item_proxy_request.position, spider.position)
-                  if distance_to_task < 100 then
-                    assign_new_task("item_proxy", entity_id, item_proxy_request, spider, player, surface)
-                    spiders_dispatched = spiders_dispatched + 1
-                    item_proxy_ordered = true
-                  else
-                    table.insert(global.available_spiders[player_index][surface_index], spider)
-                  end
-                end
-              end
-            end
-            item_proxy_requests[index] = nil
+        local item_proxy_entity_count = #item_proxy_entities
+        for i = 1, item_proxy_entity_count do
+          local entity_index = math.random(1, item_proxy_entity_count)
+          local item_proxy_entity = item_proxy_entities[entity_index] ---@type LuaEntity
+          if not (item_proxy_entity and item_proxy_entity.valid) then
+            table.remove(item_proxy_entities, entity_index)
+            goto next_entity
           end
+          local entity_id = entity_uuid(item_proxy_entity)
+          if not global.tasks.by_entity[entity_id] then
+            local proxy_target = item_proxy_entity.proxy_target
+            if proxy_target then
+              local items = item_proxy_entity.item_requests
+              local item_name, item_count = next(items)
+              if inventory.get_item_count(item_name) >= item_count then
+                local distance_to_task = distance(item_proxy_entity.position, spider.position)
+                if distance_to_task < max_distance_to_task then
+                  new_entity_task("item_proxy", entity_id, item_proxy_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
+                  spiders_dispatched = spiders_dispatched + 1
+                  item_proxy_ordered = true
+                  goto next_spider
+                else
+                  goto next_spider
+                end
+              else
+                table.remove(item_proxy_entities, entity_index)
+              end
+            else
+              table.remove(item_proxy_entities, entity_index)
+            end
+          else
+            table.remove(item_proxy_entities, entity_index)
+          end
+          ::next_entity::
         end
       end
+
+      -- if not item_proxy_ordered then
+      --   decon_tiles = decon_tiles or surface.find_tiles_filtered({
+      --     area = area,
+      --     to_be_deconstructed = true,
+      --     force = player_force,
+      --   })
+      --   local decon_tiles_count = #decon_tiles
+      --   for i = 1, decon_tiles_count do
+      --     local entity_index = math.random(1, decon_tiles_count)
+      --     local decon_tile = decon_tiles[entity_index] ---@type LuaTile
+      --     if not (decon_tile and decon_tile.valid) then
+      --       table.remove(decon_tiles, entity_index)
+      --       goto next_tile
+      --     end
+      --     local tile_id = tile_uuid(decon_tile)
+      --     if not global.tasks.by_tile[tile_id] then
+      --       local minable_properties = decon_tile.prototype.mineable_properties
+      --       local products = minable_properties and minable_properties.products
+      --       local result_when_mined = (products and products[1] and products[1].name) or nil
+      --       local space_for_result = result_when_mined and inventory.can_insert(result_when_mined)
+      --       if space_for_result then
+      --         local distance_to_task = distance(decon_tile.position, spider.position)
+      --         if distance_to_task < max_distance_to_task then
+      --           new_tile_task("deconstruct", tile_id, decon_tile, spider, player, surface)
+      --           table.remove(global.available_spiders[player_index][surface_index], spider_index)
+      --           spiders_dispatched = spiders_dispatched + 1
+      --           tile_decon_ordered = true
+      --           goto next_spider
+      --         else
+      --           goto next_spider
+      --         end
+      --       else
+      --         table.remove(decon_tiles, entity_index)
+      --       end
+      --     else
+      --       table.remove(decon_tiles, entity_index)
+      --     end
+      --     ::next_tile::
+      --   end
+      -- end
+
+      ::next_spider::
     end
 
     ::next_player::
