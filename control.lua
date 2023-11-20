@@ -762,8 +762,6 @@ local function new_entity_task(type, entity_id, entity, spider, player, surface)
   global.tasks.by_entity[entity_id] = task_data
   global.tasks.by_spider[spider_id] = task_data
   global.tasks.nudges[spider_id] = nil
-
-  debug_print("task assigned", player, spider)
 end
 
 ---@param event EventData.on_tick
