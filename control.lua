@@ -172,14 +172,14 @@ local function relink_following_spiders(player)
           spider.color = color.white
           spider.follow_target = nil
         end
-        local was_nudged = global.tasks.nudges[entity_uuid(spider)]
+        local spider_id = entity_uuid(spider)
+        local was_nudged = global.tasks.nudges[spider_id]
+        -- re-add destinations to autopilot since they were cleared when updating the follow_target, unless the destinations were part of a "nudge" task (ok to abandon)
         if destinations and not was_nudged then
-          -- re-add the destinations to the autopilot since they were cleared when assigning a new follow target
           for _, destination in pairs(destinations) do
             spider.add_autopilot_destination(destination)
           end
         end
-        local spider_id = entity_uuid(spider)
         local task_data = global.tasks.by_spider[spider_id]
         if task_data then
           local entity_id = task_data.entity_id
