@@ -62,12 +62,16 @@ little_spider_recipe.ingredients = {
 }
 little_spider_recipe.result = "little-spidertron"
 little_spider_recipe.enabled = true
+little_spider_recipe.subgroup = "logistic-network"
+little_spider_recipe.order = "a[robot]-a[little-spidertron]"
 -- little_spider_recipe.icon_size = little_spider_recipe.icon_size * 4
 data:extend{little_spider_recipe}
 
 local little_spider_item = table.deepcopy(data.raw["item-with-entity-data"]["spidertron"])
 little_spider_item.name = "little-spidertron"
 little_spider_item.place_result = "little-spidertron"
+little_spider_recipe.subgroup = "logistic-network"
+little_spider_recipe.order = "a[robot]-a[little-spidertron]"
 -- little_spider_item.icon_size = little_spider_item.icon_size * 4
 data:extend{little_spider_item}
 
