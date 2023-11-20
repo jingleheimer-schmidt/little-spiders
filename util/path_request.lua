@@ -10,8 +10,10 @@ local maximum_length = math_util.maximum_length
 ---@param player LuaPlayer
 local function request_spider_path_to_entity(surface, spider_id, spider, entity_id, entity, player)
     local bounding_box = entity.bounding_box
-    local x = (bounding_box.right_bottom.x - bounding_box.left_top.x) / 2
-    local y = (bounding_box.right_bottom.y - bounding_box.left_top.y) / 2
+    local right_bottom = bounding_box.right_bottom
+    local left_top = bounding_box.left_top
+    local x = (right_bottom.x - left_top.x) / 2
+    local y = (right_bottom.y - left_top.y) / 2
     local request_parameters = {
         bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
         collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" },
