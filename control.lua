@@ -890,8 +890,8 @@ local function on_tick(event)
           if space_for_result then
             local distance_to_task = distance(decon_entity.position, spider.position)
             if distance_to_task < max_distance_to_task then
-              global.available_spiders[player_index][surface_index][spider_index] = nil
               new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+              table.remove(global.available_spiders[player_index][surface_index], spider_index)
               spiders_dispatched = spiders_dispatched + 1
               decon_ordered = true
               goto next_spider
@@ -945,8 +945,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(revive_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  global.available_spiders[player_index][surface_index][spider_index] = nil
                   new_entity_task("revive", entity_id, revive_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
                   revive_ordered = true
                   goto next_spider
@@ -990,8 +990,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(upgrade_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  global.available_spiders[player_index][surface_index][spider_index] = nil
                   new_entity_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
                   upgrade_ordered = true
                   goto next_spider
@@ -1033,8 +1033,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(item_proxy_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  global.available_spiders[player_index][surface_index][spider_index] = nil
                   new_entity_task("item_proxy", entity_id, item_proxy_entity, spider, player, surface)
+                  table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
                   item_proxy_ordered = true
                   goto next_spider
