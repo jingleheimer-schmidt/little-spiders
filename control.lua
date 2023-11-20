@@ -740,7 +740,7 @@ end
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
 
 ---@param type string
----@param entity_id string|integer
+---@param entity_id uuid
 ---@param entity LuaEntity
 ---@param spider LuaEntity
 ---@param player LuaPlayer
