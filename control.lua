@@ -745,7 +745,7 @@ script.on_event(defines.events.on_script_path_request_finished, on_script_path_r
 ---@param spider LuaEntity
 ---@param player LuaPlayer
 ---@param surface LuaSurface
-local function assign_new_task(type, entity_id, entity, spider, player, surface)
+local function new_entity_task(type, entity_id, entity, spider, player, surface)
   local spider_id = entity_uuid(spider)
   spider.color = color.white
   request_spider_path_to_entity(surface, spider_id, spider, entity_id, entity, player)
@@ -890,8 +890,8 @@ local function on_tick(event)
           if space_for_result then
             local distance_to_task = distance(decon_entity.position, spider.position)
             if distance_to_task < max_distance_to_task then
-              assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
               global.available_spiders[player_index][surface_index][spider_index] = nil
+              new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
               spiders_dispatched = spiders_dispatched + 1
               decon_ordered = true
               goto next_spider
@@ -902,7 +902,7 @@ local function on_tick(event)
             if inventory.get_item_count("cliff-explosives") > 0 then
               local distance_to_task = distance(decon_entity.position, spider.position)
               if distance_to_task < max_distance_to_task then
-                assign_new_task("deconstruct", entity_id, decon_entity, spider, player, surface)
+                new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
                 global.available_spiders[player_index][surface_index][spider_index] = nil
                 spiders_dispatched = spiders_dispatched + 1
                 decon_ordered = true
@@ -945,8 +945,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(revive_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  assign_new_task("revive", entity_id, revive_entity, spider, player, surface)
                   global.available_spiders[player_index][surface_index][spider_index] = nil
+                  new_entity_task("revive", entity_id, revive_entity, spider, player, surface)
                   spiders_dispatched = spiders_dispatched + 1
                   revive_ordered = true
                   goto next_spider
@@ -990,8 +990,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(upgrade_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  assign_new_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                   global.available_spiders[player_index][surface_index][spider_index] = nil
+                  new_entity_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                   spiders_dispatched = spiders_dispatched + 1
                   upgrade_ordered = true
                   goto next_spider
@@ -1033,8 +1033,8 @@ local function on_tick(event)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(item_proxy_entity.position, spider.position)
                 if distance_to_task < max_distance_to_task then
-                  assign_new_task("item_proxy", entity_id, item_proxy_entity, spider, player, surface)
                   global.available_spiders[player_index][surface_index][spider_index] = nil
+                  new_entity_task("item_proxy", entity_id, item_proxy_entity, spider, player, surface)
                   spiders_dispatched = spiders_dispatched + 1
                   item_proxy_ordered = true
                   goto next_spider
