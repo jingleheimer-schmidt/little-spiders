@@ -13,6 +13,19 @@ local function entity_uuid(entity)
     end
 end
 
+---@param tile LuaTile
+---@param surface_index integer?
+---@param position TilePosition?
+---@return string
+local function tile_uuid(tile, surface_index, position)
+    surface_index = surface_index or tile.surface.index
+    position = position or tile.position
+    local x = position.x
+    local y = position.y
+    local uuid = surface_index .. "," .. x .. "," .. y
+    return uuid
+end
+
 ---@param sorted_table table
 ---@return table
 local function randomize_table(sorted_table)
@@ -63,6 +76,7 @@ end
 
 return {
     entity_uuid = entity_uuid,
+    tile_uuid = tile_uuid,
     randomize_table = randomize_table,
     random_pairs = random_pairs,
     shuffle_array = shuffle_array,

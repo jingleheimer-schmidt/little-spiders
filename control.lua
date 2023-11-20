@@ -3,6 +3,7 @@
 
 local general_util = require("util/general")
 local entity_uuid = general_util.entity_uuid
+local tile_uuid = general_util.tile_uuid
 local new_task_id = general_util.new_task_id
 
 local color_util = require("util/colors")
@@ -41,9 +42,10 @@ local function on_init()
   global.spiders = {} --[[@type table<integer, table<uuid, LuaEntity>>]]
   global.available_spiders = {} --[[@type table<integer, table<integer, LuaEntity[]>>]]
   global.tasks = {
-    by_entity = {}, --[[@type table<uuid, task_data>]]
-    by_spider = {}, --[[@type table<uuid, task_data>]]
-    nudges = {}, --[[@type table<uuid, task_data>]]
+    by_entity = {}, --[[@type table<uuid, entity_task_data>]]
+    by_spider = {}, --[[@type table<uuid, entity_task_data>]]
+    by_tile = {}, --[[@type table<uuid, entity_task_data>]]
+    nudges = {}, --[[@type table<uuid, entity_task_data>]]
   }
   global.spider_path_requests = {} --[[@type table<integer, path_request_data>]]
   global.spider_path_to_position_requests = {} --[[@type table<integer, position_path_request_data>]]
@@ -62,6 +64,7 @@ local function on_configuration_changed(event)
   global.tasks = global.tasks or {}
   global.tasks.by_entity = global.tasks.by_entity or {}
   global.tasks.by_spider = global.tasks.by_spider or {}
+  global.tasks.by_tile = global.tasks.by_tile or {}
   global.tasks.nudges = global.tasks.nudges or {}
   global.spider_path_requests = global.spider_path_requests or {}
   global.spider_path_to_position_requests = global.spider_path_to_position_requests or {}
@@ -764,6 +767,31 @@ local function new_entity_task(type, entity_id, entity, spider, player, surface)
   global.tasks.nudges[spider_id] = nil
 end
 
+-- ---@param type string
+-- ---@param tile_id uuid
+-- ---@param tile LuaTile
+-- ---@param spider LuaEntity
+-- ---@param player LuaPlayer
+-- ---@param surface LuaSurface
+-- local function new_tile_task(type, tile_id, tile, spider, player, surface)
+--   local spider_id = entity_uuid(spider)
+--   spider.color = color.white
+--   request_spider_path_to_tile(surface, spider_id, spider, tile_id, tile, player)
+--   local task_data = {
+--     tile = tile,
+--     tile_id = tile_id,
+--     spider = spider,
+--     spider_id = spider_id,
+--     task_type = type,
+--     player = player,
+--     status = "path_requested",
+--     render_ids = {},
+--   }
+--   global.tasks.by_tile[tile_id] = task_data
+--   global.tasks.by_spider[spider_id] = task_data
+--   global.tasks.nudges[spider_id] = nil
+-- end
+
 ---@param event EventData.on_tick
 local function on_tick(event)
   for _, player in pairs(game.connected_players) do
@@ -1051,6 +1079,49 @@ local function on_tick(event)
           ::next_entity::
         end
       end
+
+      -- if not item_proxy_ordered then
+      --   decon_tiles = decon_tiles or surface.find_tiles_filtered({
+      --     area = area,
+      --     to_be_deconstructed = true,
+      --     force = player_force,
+      --   })
+      --   local decon_tiles_count = #decon_tiles
+      --   for i = 1, decon_tiles_count do
+      --     local entity_index = math.random(1, decon_tiles_count)
+      --     local decon_tile = decon_tiles[entity_index] ---@type LuaTile
+      --     if not (decon_tile and decon_tile.valid) then
+      --       table.remove(decon_tiles, entity_index)
+      --       goto next_tile
+      --     end
+      --     local tile_id = tile_uuid(decon_tile)
+      --     if not global.tasks.by_tile[tile_id] then
+      --       local minable_properties = decon_tile.prototype.mineable_properties
+      --       local products = minable_properties and minable_properties.products
+      --       local result_when_mined = (products and products[1] and products[1].name) or nil
+      --       local space_for_result = result_when_mined and inventory.can_insert(result_when_mined)
+      --       if space_for_result then
+      --         local distance_to_task = distance(decon_tile.position, spider.position)
+      --         if distance_to_task < max_distance_to_task then
+      --           new_tile_task("deconstruct", tile_id, decon_tile, spider, player, surface)
+      --           table.remove(global.available_spiders[player_index][surface_index], spider_index)
+      --           spiders_dispatched = spiders_dispatched + 1
+      --           tile_decon_ordered = true
+      --           goto next_spider
+      --         else
+      --           goto next_spider
+      --         end
+      --       else
+      --         table.remove(decon_tiles, entity_index)
+      --       end
+      --     else
+      --       table.remove(decon_tiles, entity_index)
+      --     end
+      --     ::next_tile::
+      --   end
+      -- end
+
+      ::next_spider::
     end
 
     ::next_player::
