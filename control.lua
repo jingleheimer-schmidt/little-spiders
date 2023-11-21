@@ -55,6 +55,7 @@ local function on_init()
   global.previous_player_color = {} --[[@type table<integer, Color>]]
   global.path_requested = {} --[[@type table<uuid, boolean>]]
   global.spiders_enabled = {} --[[@type table<integer, boolean>]]
+  global.visualization_render_ids = {} --[[@type table<integer, table<integer, integer>>]]
   add_commands()
 end
 
@@ -752,6 +753,116 @@ local function on_script_path_request_finished(event)
 end
 
 script.on_event(defines.events.on_script_path_request_finished, on_script_path_request_finished)
+
+---@param player_index integer
+local function clear_visualization_renderings(player_index)
+  local render_ids = global.visualization_render_ids[player_index]
+  if render_ids then
+    for _, render_id in pairs(render_ids) do
+      rendering.destroy(render_id)
+    end
+    global.visualization_render_ids[player_index] = {}
+  end
+end
+
+---@param event EventData.on_player_cursor_stack_changed
+local function on_player_cursor_stack_changed(event)
+  local player_index = event.player_index
+  local player = game.get_player(player_index)
+  if not player then return end
+  if not player.character then return end
+  local available_spiders = global.available_spiders[player_index]
+  if not (available_spiders and available_spiders[player.surface_index]) then return end
+  if #available_spiders[player.surface_index] == 0 then return end
+  local cursor_stack = player.cursor_stack
+  local value = 0.1
+  local alpha = 0.05
+  if cursor_stack and cursor_stack.valid_for_read then
+    if cursor_stack.is_deconstruction_item then
+      clear_visualization_renderings(player_index)
+      local render_id = rendering.draw_rectangle {
+        -- color = color.red,
+        color = { r = value, g = 0, b = 0, a = alpha },
+        filled = true,
+        left_top = player.character,
+        left_top_offset = { -20, -20 },
+        right_bottom = player.character,
+        right_bottom_offset = { 20, 20 },
+        surface = player.surface,
+        time_to_live = nil,
+        players = { player },
+        -- draw_on_ground = true,
+      }
+      if render_id then
+        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
+        table.insert(global.visualization_render_ids[player_index], render_id)
+      end
+    elseif cursor_stack.is_blueprint then
+      clear_visualization_renderings(player_index)
+      local render_id = rendering.draw_rectangle {
+        -- color = color.blue,
+        color = { r = 0, g = 0, b = value, a = alpha },
+        filled = true,
+        left_top = player.character,
+        left_top_offset = { -20, -20 },
+        right_bottom = player.character,
+        right_bottom_offset = { 20, 20 },
+        surface = player.surface,
+        time_to_live = nil,
+        players = { player },
+        -- draw_on_ground = true,
+      }
+      if render_id then
+        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
+        table.insert(global.visualization_render_ids[player_index], render_id)
+      end
+    elseif cursor_stack.is_blueprint_book then
+      clear_visualization_renderings(player_index)
+      local render_id = rendering.draw_rectangle {
+        -- color = color.blue,
+        color = { r = 0, g = 0, b = value, a = alpha },
+        filled = true,
+        left_top = player.character,
+        left_top_offset = { -20, -20 },
+        right_bottom = player.character,
+        right_bottom_offset = { 20, 20 },
+        surface = player.surface,
+        time_to_live = nil,
+        players = { player },
+        -- draw_on_ground = true,
+      }
+      if render_id then
+        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
+        table.insert(global.visualization_render_ids[player_index], render_id)
+      end
+    elseif cursor_stack.is_upgrade_item then
+      clear_visualization_renderings(player_index)
+      local render_id = rendering.draw_rectangle {
+        -- color = color.green,
+        color = { r = 0, g = value, b = 0, a = alpha },
+        filled = true,
+        left_top = player.character,
+        left_top_offset = { -20, -20 },
+        right_bottom = player.character,
+        right_bottom_offset = { 20, 20 },
+        surface = player.surface,
+        time_to_live = nil,
+        players = { player },
+        -- draw_on_ground = true,
+      }
+      if render_id then
+        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
+        table.insert(global.visualization_render_ids[player_index], render_id)
+      end
+    else
+      clear_visualization_renderings(player_index)
+    end
+  else
+    clear_visualization_renderings(player_index)
+  end
+end
+
+script.on_event(defines.events.on_player_cursor_stack_changed, on_player_cursor_stack_changed)
 
 ---@param type string
 ---@param entity_id uuid
