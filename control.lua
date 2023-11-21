@@ -1013,7 +1013,7 @@ local function on_tick(event)
 
     for spider_index, spider in pairs(global.available_spiders[player_index][surface_index]) do
       if not (spider and spider.valid) then
-        global.available_spiders[player_index][surface_index][spider_index] = nil
+        table.remove(global.available_spiders[player_index][surface_index], spider_index)
         goto next_spider
       end
 
