@@ -595,7 +595,6 @@ local function on_spider_command_completed(event)
       -- if the player doesn't have a valid character, clear any tasks and return it to the player's available spiders table for when they do have a character again
       local player_entity = get_player_entity(player)
       if not (player_entity and player_entity.valid) then
-        global.tasks.nudges[spider_id] = nil
         local entity_id = active_task_data and active_task_data.entity_id
         if entity_id then
           local player_index = player.index
@@ -604,6 +603,7 @@ local function on_spider_command_completed(event)
           global.tasks.by_entity[entity_id] = nil
           global.tasks.by_spider[spider_id] = nil
         end
+        global.tasks.nudges[spider_id] = nil
         return
       end
 
