@@ -947,7 +947,8 @@ local function on_tick(event)
     local current = player.color
     local previous = global.previous_player_color[player_index]
     if (previous.r ~= current.r) or (previous.g ~= current.g) or (previous.b ~= current.b) or (previous.a ~= current.a) then
-      local spiders = global.spiders[player_index]
+      local available_spiders = global.available_spiders[player_index]
+      local spiders = available_spiders and available_spiders[surface_index]
       if spiders then
         for spider_id, spider in pairs(spiders) do
           if spider.valid then
