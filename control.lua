@@ -1028,7 +1028,7 @@ local function on_tick(event)
     local tile_decon_ordered = false
     local tile_reivive_ordered = false
     local spiders_dispatched = 0
-    local max_spiders_dispatched = 50
+    local max_spiders_dispatched = 9
     -- local max_distance_to_task = 100
 
     for spider_index, spider in pairs(global.available_spiders[player_index][surface_index]) do
