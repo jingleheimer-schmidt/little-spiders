@@ -794,71 +794,23 @@ local function on_player_cursor_stack_changed(event)
   if not (available_spiders and available_spiders[player.surface_index]) then return end
   if #available_spiders[player.surface_index] == 0 then return end
   local cursor_stack = player.cursor_stack
-  local value = 0.1
-  local alpha = 0.05
+  local value = 0.2
+  local alpha = 0.1
   if cursor_stack and cursor_stack.valid_for_read then
+    local render_color = nil
     if cursor_stack.is_deconstruction_item then
-      clear_visualization_renderings(player_index)
-      local render_id = rendering.draw_rectangle {
-        -- color = color.red,
-        color = { r = value, g = 0, b = 0, a = alpha },
-        filled = true,
-        left_top = player.character,
-        left_top_offset = { -20, -20 },
-        right_bottom = player.character,
-        right_bottom_offset = { 20, 20 },
-        surface = player.surface,
-        time_to_live = nil,
-        players = { player },
-        draw_on_ground = true,
-      }
-      if render_id then
-        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
-        table.insert(global.visualization_render_ids[player_index], render_id)
-      end
+      render_color = { r = value, g = 0, b = 0, a = alpha }
     elseif cursor_stack.is_blueprint then
-      clear_visualization_renderings(player_index)
-      local render_id = rendering.draw_rectangle {
-        -- color = color.blue,
-        color = { r = 0, g = 0, b = value, a = alpha },
-        filled = true,
-        left_top = player.character,
-        left_top_offset = { -20, -20 },
-        right_bottom = player.character,
-        right_bottom_offset = { 20, 20 },
-        surface = player.surface,
-        time_to_live = nil,
-        players = { player },
-        -- draw_on_ground = true,
-      }
-      if render_id then
-        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
-        table.insert(global.visualization_render_ids[player_index], render_id)
-      end
+      render_color = { r = 0, g = 0, b = value, a = alpha }
     elseif cursor_stack.is_blueprint_book then
-      clear_visualization_renderings(player_index)
-      local render_id = rendering.draw_rectangle {
-        -- color = color.blue,
-        color = { r = 0, g = 0, b = value, a = alpha },
-        filled = true,
-        left_top = player.character,
-        left_top_offset = { -20, -20 },
-        right_bottom = player.character,
-        right_bottom_offset = { 20, 20 },
-        surface = player.surface,
-        time_to_live = nil,
-        players = { player },
-        -- draw_on_ground = true,
-      }
-      if render_id then
-        global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
-        table.insert(global.visualization_render_ids[player_index], render_id)
-      end
+      render_color = { r = 0, g = 0, b = value, a = alpha }
     elseif cursor_stack.is_upgrade_item then
+      render_color = { r = 0, g = value, b = 0, a = alpha }
+    end
+    if render_color then
       clear_visualization_renderings(player_index)
       local render_id = rendering.draw_rectangle {
-        -- color = color.green,
-        color = { r = 0, g = value, b = 0, a = alpha },
+        color = render_color,
         filled = true,
         left_top = player.character,
         left_top_offset = { -half_max_task_range, -half_max_task_range },
@@ -867,7 +819,7 @@ local function on_player_cursor_stack_changed(event)
         surface = player.surface,
         time_to_live = nil,
         players = { player },
-        -- draw_on_ground = true,
+        draw_on_ground = true,
       }
       if render_id then
         global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
