@@ -27,6 +27,11 @@ local path_request_util = require("util/path_request")
 local request_spider_path_to_entity = path_request_util.request_spider_path_to_entity
 local request_spider_path_to_position = path_request_util.request_spider_path_to_position
 
+local constants = require("util/constants")
+local double_max_task_range = constants.double_max_task_range
+local half_max_task_range = constants.half_max_task_range
+local max_task_range = constants.max_task_range
+
 local function toggle_debug()
   global.debug = not global.debug
   for _, player in pairs(game.connected_players) do
