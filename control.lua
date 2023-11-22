@@ -793,9 +793,10 @@ local function on_player_cursor_stack_changed(event)
   local player = game.get_player(player_index)
   if not player then return end
   if not player.character then return end
-  local available_spiders = global.available_spiders[player_index]
-  if not (available_spiders and available_spiders[player.surface_index]) then return end
-  if #available_spiders[player.surface_index] == 0 then return end
+  if not global.spiders_enabled[player_index] then
+    clear_visualization_renderings(player_index)
+    return
+  end
   local cursor_stack = player.cursor_stack
   if cursor_stack and cursor_stack.valid_for_read then
     local render_color = { r = 0.01, g = 0.5, b = 00.02, a = 0.1}
