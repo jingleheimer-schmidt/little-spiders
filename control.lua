@@ -352,6 +352,12 @@ local function on_spider_command_completed(event)
         local player = task_data.player
         local task_type = task_data.task_type
 
+        if not global.spiders_enabled[player.index] then
+          abandon_task(spider_id, entity_id, spider, player)
+          debug_print("task abandoned: player disabled little spiders", player, spider, color.red)
+          return
+        end
+
         if not player.valid then
           abandon_task(spider_id, entity_id, spider, player)
           debug_print("task abandoned: no valid player", player, spider, color.red)
