@@ -687,29 +687,22 @@ local function on_script_path_request_finished(event)
             end
 
           else
+            -- If no path was found, abandon the task and add a random nearby destination for the spider autopilot
             abandon_task(spider_id, entity_id, spider, player, player_entity)
-            -- If no path was found, add a random nearby destination for the spider autopilot and update the available spiders table
-            if math.random() < 0.125 then
-              spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
-            end
-            -- local player_index = player.index
-            -- local surface_index = spider.surface_index
-            -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-            -- global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-            -- table.insert(global.available_spiders[player_index][surface_index], spider)
-            -- spider.color = player.color
+            -- if math.random() < 0.125 then
+            --   spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
+            -- end
 
             -- Draw dotted lines between the spider and the entity to indicate failure to find a path
             local surface = spider.surface
             draw_dotted_line(surface, spider, entity, color.white, 30)
             draw_dotted_line(surface, spider, entity, color.red, 30, true)
-
-            -- -- Destroy the render IDs associated with the spider and entity, and remove the task from the global tasks table
-            -- destroy_associated_renderings(spider_id)
-            -- global.tasks.by_entity[entity_id] = nil
-            -- global.tasks.by_spider[spider_id] = nil
           end
+        else
+          abandon_task(spider_id, entity_id, spider, player, player_entity)
         end
+      else
+        abandon_task(spider_id, entity_id, spider, player, player_entity)
       end
     end
     global.spider_path_requests[path_request_id] = nil
@@ -730,22 +723,22 @@ local function on_script_path_request_finished(event)
         if path then
           -- If a path was found, set the spider's autopilot destination to nil and draw lines between the spider and each waypoint in the path
           spider.autopilot_destination = nil
-          if global.debug then
-            local previous_position = spider.position
-            local spider_color = spider.color
-            for _, waypoint in pairs(path) do
-              local new_position = waypoint.position
-              spider.add_autopilot_destination(new_position)
-              draw_circle(surface, new_position, color.white, 0.25, 180)
+          local previous_position = spider.position
+          local spider_color = spider.color or color.white
+          for _, waypoint in pairs(path) do
+            local new_position = waypoint.position
+            spider.add_autopilot_destination(new_position)
+            if global.debug then
+              draw_circle(surface, new_position, spider_color, 0.25, 180)
               if previous_position then
-                draw_line(surface, previous_position, new_position, color.white, 180)
+                draw_line(surface, previous_position, new_position, spider_color, 180)
               end
               previous_position = new_position
             end
           end
 
           -- Add the task to the nudges table and update its status
-          local render_id = draw_line(spider.surface, final_position, spider, color.white, 10)
+          local render_id = draw_line(spider.surface, final_position, spider, spider_color, 10)
           global.tasks.nudges[spider_id] = {
             spider = spider,
             spider_id = spider_id,
@@ -758,9 +751,9 @@ local function on_script_path_request_finished(event)
           }
         else
           -- If no path was found, add a random autopilot destination for the spider and update the available spiders table
-          if math.random() < 0.125 then
-            spider.add_autopilot_destination(random_position_on_circumference(spider.position, 20))
-          end
+          -- if math.random() < 0.125 then
+          --   spider.add_autopilot_destination(random_position_on_circumference(spider.position, 20))
+          -- end
           -- local player_index = player.index
           -- local surface_index = player.surface_index
           -- global.available_spiders[player_index] = global.available_spiders[player_index] or {}
@@ -949,14 +942,24 @@ local function on_tick(event)
         local distance_to_player = distance(spider.position, player.position)
         local exceeds_distance_limit = distance_to_player > double_max_task_range
         local active_task = global.tasks.by_spider[spider_id]
-        if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
+        if (counter < 5) and no_speed then
           if not global.path_requested[spider_id] then
-            if active_task then
-              abandon_task(spider_id, active_task.entity_id, spider, player, player_entity)
-            elseif exceeds_distance_limit then
-              nudge_spidertron(spider, spider_id, player)
+            if exceeds_distance_limit then
+              if active_task then
+                abandon_task(spider_id, active_task.entity_id, spider, player, player_entity)
+              else
+                nudge_spidertron(spider, spider_id, player)
+              end
+              counter = counter + 1
+            else
+              -- if not active_task then
+              --   local chance = math.random()
+              --   if chance < 0.0125 then
+              --     nudge_spidertron(spider, spider_id, player)
+              --     counter = counter + 1
+              --   end
+              -- end
             end
-            counter = counter + 1
           end
         end
       else
