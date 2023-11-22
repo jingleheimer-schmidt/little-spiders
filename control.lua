@@ -456,7 +456,7 @@ local function on_spider_command_completed(event)
                 local ghost_position = entity.position
                 local spider_position = spider.position
                 local distance_to_player = distance(ghost_position, player.position)
-                if distance_to_player > 50 then
+                if distance_to_player > double_max_task_range then
                   abandon_task(spider_id, entity_id, spider, player, player_entity)
                   debug_print("task abandoned: player too far from ghost", player, spider, color.red)
                 else
@@ -615,7 +615,7 @@ local function on_spider_command_completed(event)
       -- if the player is too far away from the spider's final destination, abandon the current task or repath to the final destination (player entity)
       local distance_to_player = distance(player_entity.position, final_destination)
       local path_requested = global.path_requested[spider_id]
-      if (distance_to_player > 100) and (not path_requested) then
+      if (distance_to_player > double_max_task_range) and (not path_requested) then
         if active_task_data then
           abandon_task(spider_id, active_task_data.entity_id, spider, player)
         else
@@ -642,7 +642,7 @@ local function on_script_path_request_finished(event)
     if (spider and spider.valid and entity and entity.valid and player_entity and player_entity.valid) then
       if spider.surface_index == player.surface_index then
         local distance_to_task = distance(player.position, entity.position)
-        if distance_to_task < 50 then
+        if distance_to_task < max_task_range then
           -- Set the spider's follow target to the player's entity
           spider.follow_target = player_entity
 
@@ -861,9 +861,9 @@ local function on_player_cursor_stack_changed(event)
         color = { r = 0, g = value, b = 0, a = alpha },
         filled = true,
         left_top = player.character,
-        left_top_offset = { -20, -20 },
+        left_top_offset = { -half_max_task_range, -half_max_task_range },
         right_bottom = player.character,
-        right_bottom_offset = { 20, 20 },
+        right_bottom_offset = { half_max_task_range, half_max_task_range },
         surface = player.surface,
         time_to_live = nil,
         players = { player },
@@ -985,7 +985,7 @@ local function on_tick(event)
       if spider.valid then
         local no_speed = spider.speed == 0
         local distance_to_player = distance(spider.position, player.position)
-        local exceeds_distance_limit = distance_to_player > 100
+        local exceeds_distance_limit = distance_to_player > double_max_task_range
         local active_task = global.tasks.by_spider[spider_id]
         if (counter < 5) and (no_speed or (exceeds_distance_limit and active_task)) then
           if not global.path_requested[spider_id] then
@@ -1012,8 +1012,8 @@ local function on_tick(event)
     local character_position_x = player_entity.position.x
     local character_position_y = player_entity.position.y
     local area = {
-      { character_position_x - 20, character_position_y - 20 },
-      { character_position_x + 20, character_position_y + 20 },
+      { character_position_x - half_max_task_range, character_position_y - half_max_task_range },
+      { character_position_x + half_max_task_range, character_position_y + half_max_task_range },
     }
     local decon_entities = nil
     local revive_entities = nil
@@ -1029,7 +1029,7 @@ local function on_tick(event)
     local tile_reivive_ordered = false
     local spiders_dispatched = 0
     local max_spiders_dispatched = 50
-    local max_distance_to_task = 100
+    -- local max_distance_to_task = 100
 
     for spider_index, spider in pairs(global.available_spiders[player_index][surface_index]) do
       if not (spider and spider.valid) then
@@ -1057,7 +1057,7 @@ local function on_tick(event)
           local space_for_result = result_when_mined and inventory.can_insert(result_when_mined)
           if space_for_result then
             local distance_to_task = distance(decon_entity.position, spider.position)
-            if distance_to_task < max_distance_to_task then
+            if distance_to_task < double_max_task_range then
               new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
               table.remove(global.available_spiders[player_index][surface_index], spider_index)
               spiders_dispatched = spiders_dispatched + 1
@@ -1069,7 +1069,7 @@ local function on_tick(event)
           elseif (decon_entity.type == "cliff") then
             if inventory.get_item_count("cliff-explosives") > 0 then
               local distance_to_task = distance(decon_entity.position, spider.position)
-              if distance_to_task < max_distance_to_task then
+              if distance_to_task < double_max_task_range then
                 new_entity_task("deconstruct", entity_id, decon_entity, spider, player, surface)
                 global.available_spiders[player_index][surface_index][spider_index] = nil
                 spiders_dispatched = spiders_dispatched + 1
@@ -1112,7 +1112,7 @@ local function on_tick(event)
               local item_count = item_stack.count or 1
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(revive_entity.position, spider.position)
-                if distance_to_task < max_distance_to_task then
+                if distance_to_task < double_max_task_range then
                   new_entity_task("revive", entity_id, revive_entity, spider, player, surface)
                   table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
@@ -1157,7 +1157,7 @@ local function on_tick(event)
               local item_count = item_stack.count or 1
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(upgrade_entity.position, spider.position)
-                if distance_to_task < max_distance_to_task then
+                if distance_to_task < double_max_task_range then
                   new_entity_task("upgrade", entity_id, upgrade_entity, spider, player, surface)
                   table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
@@ -1200,7 +1200,7 @@ local function on_tick(event)
               local item_name, item_count = next(items)
               if inventory.get_item_count(item_name) >= item_count then
                 local distance_to_task = distance(item_proxy_entity.position, spider.position)
-                if distance_to_task < max_distance_to_task then
+                if distance_to_task < double_max_task_range then
                   new_entity_task("item_proxy", entity_id, item_proxy_entity, spider, player, surface)
                   table.remove(global.available_spiders[player_index][surface_index], spider_index)
                   spiders_dispatched = spiders_dispatched + 1
