@@ -810,7 +810,7 @@ local function on_player_cursor_stack_changed(event)
         surface = player.surface,
         time_to_live = nil,
         players = { player },
-        -- draw_on_ground = true,
+        draw_on_ground = true,
       }
       if render_id then
         global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
