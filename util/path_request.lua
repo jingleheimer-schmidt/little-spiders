@@ -1,7 +1,7 @@
 
 local math_util = require("util/math")
 local maximum_length = math_util.maximum_length
-local bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } }
+local spider_leg_bounding_box = { { -0.01, -0.01 }, { 0.01, 0.01 } }
 local collision_mask = { "water-tile", "colliding-with-tiles-only", "consider-tile-transitions" }
 local path_to_entity_flags = { cache = false, low_priority = true }
 local path_to_position_flags = { cache = true, low_priority = true }
@@ -19,7 +19,7 @@ local function request_spider_path_to_entity(surface, spider_id, spider, entity_
     local x = (right_bottom.x - left_top.x) / 2
     local y = (right_bottom.y - left_top.y) / 2
     local request_parameters = {
-        bounding_box = bounding_box,
+        bounding_box = spider_leg_bounding_box,
         collision_mask = collision_mask,
         start = spider.position,
         goal = entity.position,
@@ -49,7 +49,7 @@ end
 ---@param player LuaPlayer
 local function request_spider_path_to_position(surface, spider_id, spider, starting_position, position, player)
     local request_parameters = {
-        bounding_box = bounding_box,
+        bounding_box = spider_leg_bounding_box,
         collision_mask = collision_mask,
         start = starting_position,
         goal = position,
