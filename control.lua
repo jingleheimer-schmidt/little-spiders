@@ -640,6 +640,10 @@ local function on_script_path_request_finished(event)
     local entity_id = global.spider_path_requests[path_request_id].entity_id
     local player_entity = get_player_entity(player)
     if (spider and spider.valid and entity and entity.valid and player_entity and player_entity.valid) then
+      if not global.spiders_enabled[player.index] then
+        abandon_task(spider_id, entity_id, spider, player, player_entity)
+        return
+      end
       if spider.surface_index == player.surface_index then
         local distance_to_task = distance(player.position, entity.position)
         if distance_to_task < max_task_range then
