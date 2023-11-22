@@ -243,23 +243,23 @@ local function nudge_spidertron(spidertron, spider_id, player)
   local new_position = surface.find_non_colliding_position("little-spidertron-leg-1", nearby_position, 10, 0.5)
   new_position = new_position or nearby_position
   if destination_count >= 1 then
-    local final_destination = autopilot_destinations[destination_count]
-    if destination_count > 1 then
-      autopilot_destinations[1] = new_position
-    else
-      table.insert(autopilot_destinations, 1, new_position)
-    end
-    spidertron.autopilot_destination = nil
-    -- spidertron.follow_target = get_player_entity(player)
-    for _, destination in pairs(autopilot_destinations) do
-      spidertron.add_autopilot_destination(destination)
-    end
     if not global.path_requested[spider_id] then
+      local final_destination = autopilot_destinations[destination_count]
+      if destination_count > 1 then
+        autopilot_destinations[1] = new_position
+      else
+        table.insert(autopilot_destinations, 1, new_position)
+      end
+      spidertron.autopilot_destination = nil
+      -- spidertron.follow_target = get_player_entity(player)
+      for _, destination in pairs(autopilot_destinations) do
+        spidertron.add_autopilot_destination(destination)
+      end
       request_spider_path_to_position(surface, spider_id, spidertron, new_position, final_destination, player)
     end
   else
-    spidertron.add_autopilot_destination(new_position)
     if not global.path_requested[spider_id] then
+      spidertron.add_autopilot_destination(new_position)
       request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
     end
   end
