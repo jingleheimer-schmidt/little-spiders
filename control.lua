@@ -807,7 +807,7 @@ local function on_player_cursor_stack_changed(event)
         sprite = "utility/construction_radius_visualization",
         surface = player.surface,
         target = player.character,
-        x_scale = max_task_range * 3.2,
+        x_scale = max_task_range * 3.2, -- i don't really understand why this is the magic number, but it's what got the sprite to be the correct size
         y_scale = max_task_range * 3.2,
         render_layer = "radius-visualization",
         players = { player },
