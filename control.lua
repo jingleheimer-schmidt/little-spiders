@@ -802,18 +802,29 @@ local function on_player_cursor_stack_changed(event)
     local show_visualization = cursor_stack.is_deconstruction_item or cursor_stack.is_upgrade_item or cursor_stack.is_blueprint or cursor_stack.is_blueprint_book
     if show_visualization then
       clear_visualization_renderings(player_index)
-      local render_id = rendering.draw_rectangle {
-        color = render_color,
-        filled = true,
-        left_top = player.character,
-        left_top_offset = { -half_max_task_range, -half_max_task_range },
-        right_bottom = player.character,
-        right_bottom_offset = { half_max_task_range, half_max_task_range },
+      local render_id = rendering.draw_sprite {
+        sprite = "utility/construction_radius_visualization",
         surface = player.surface,
-        time_to_live = nil,
+        target = player.character,
+        x_scale = max_task_range * 3.2,
+        y_scale = max_task_range * 3.2,
+        render_layer = "radius-visualization",
         players = { player },
-        draw_on_ground = true,
+        only_in_alt_mode = true,
+        tint = { r = 0.45, g = 0.4, b = 0.4, a = 0.5}, -- by trial and error, this is the closest i could match the vanilla construction radius visualization look
       }
+      -- local render_id = rendering.draw_rectangle {
+      --   color = render_color,
+      --   filled = true,
+      --   left_top = player.character,
+      --   left_top_offset = { -half_max_task_range, -half_max_task_range },
+      --   right_bottom = player.character,
+      --   right_bottom_offset = { half_max_task_range, half_max_task_range },
+      --   surface = player.surface,
+      --   time_to_live = nil,
+      --   players = { player },
+      --   draw_on_ground = true,
+      -- }
       if render_id then
         global.visualization_render_ids[player_index] = global.visualization_render_ids[player_index] or {}
         table.insert(global.visualization_render_ids[player_index], render_id)
