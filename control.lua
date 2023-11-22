@@ -80,6 +80,7 @@ local function on_configuration_changed(event)
   global.previous_player_color = global.previous_player_color or {}
   global.path_requested = global.path_requested or {}
   global.spiders_enabled = global.spiders_enabled or {}
+  global.visualization_render_ids = global.visualization_render_ids or {}
 end
 
 script.on_init(on_init)
