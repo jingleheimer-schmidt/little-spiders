@@ -797,20 +797,10 @@ local function on_player_cursor_stack_changed(event)
   if not (available_spiders and available_spiders[player.surface_index]) then return end
   if #available_spiders[player.surface_index] == 0 then return end
   local cursor_stack = player.cursor_stack
-  local value = 0.2
-  local alpha = 0.1
   if cursor_stack and cursor_stack.valid_for_read then
-    local render_color = nil
-    if cursor_stack.is_deconstruction_item then
-      render_color = { r = value, g = 0, b = 0, a = alpha }
-    elseif cursor_stack.is_blueprint then
-      render_color = { r = 0, g = 0, b = value, a = alpha }
-    elseif cursor_stack.is_blueprint_book then
-      render_color = { r = 0, g = 0, b = value, a = alpha }
-    elseif cursor_stack.is_upgrade_item then
-      render_color = { r = 0, g = value, b = 0, a = alpha }
-    end
-    if render_color then
+    local render_color = { r = 0.01, g = 0.5, b = 00.02, a = 0.1}
+    local show_visualization = cursor_stack.is_deconstruction_item or cursor_stack.is_upgrade_item or cursor_stack.is_blueprint or cursor_stack.is_blueprint_book
+    if show_visualization then
       clear_visualization_renderings(player_index)
       local render_id = rendering.draw_rectangle {
         color = render_color,
