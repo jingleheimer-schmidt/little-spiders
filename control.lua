@@ -35,7 +35,8 @@ local max_task_range = constants.max_task_range
 local function toggle_debug()
   global.debug = not global.debug
   for _, player in pairs(game.connected_players) do
-    player.print("Little Spiders debug mode " .. (global.debug and "enabled" or "disabled"))
+    local messaage = global.debug and { "messages.debug-mode-enabled" } or { "messages.debug-mode-disabled" }
+    player.print(messaage)
   end
 end
 
