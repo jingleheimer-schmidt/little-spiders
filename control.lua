@@ -1010,6 +1010,7 @@ local function on_tick(event)
       decon_entities = decon_entities or surface.find_entities_filtered({
         area = area,
         to_be_deconstructed = true,
+        force = player_force,
       })
       local decon_entity_count = #decon_entities
       for i = 1, decon_entity_count do
@@ -1063,7 +1064,8 @@ local function on_tick(event)
       if not decon_ordered then
         revive_entities = revive_entities or surface.find_entities_filtered({
           area = area,
-          type = "entity-ghost", -- also add force = player.force?
+          type = "entity-ghost",
+          force = player_force,
         })
         local revive_entity_count = #revive_entities
         for i = 1, revive_entity_count do
@@ -1108,6 +1110,7 @@ local function on_tick(event)
         upgrade_entities = upgrade_entities or surface.find_entities_filtered({
           area = area,
           to_be_upgraded = true,
+          force = player_force,
         })
         local upgrade_entity_count = #upgrade_entities
         for i = 1, upgrade_entity_count do
@@ -1153,6 +1156,7 @@ local function on_tick(event)
         item_proxy_entities = item_proxy_entities or surface.find_entities_filtered({
           area = area,
           type = "item-request-proxy",
+          force = player_force,
         })
         local item_proxy_entity_count = #item_proxy_entities
         for i = 1, item_proxy_entity_count do
