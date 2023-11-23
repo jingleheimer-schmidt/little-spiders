@@ -672,9 +672,17 @@ local function on_script_path_request_finished(event)
               spider.add_autopilot_destination(waypoint_position)
               if global.debug then
                 local surface = spider.surface
-                draw_circle(surface, waypoint.position, task_color, 0.25, 180)
+                local circle_id = draw_circle(surface, waypoint.position, task_color, 0.25)
+                if circle_id then
+                  global.tasks.by_entity[entity_id].render_ids[circle_id] = true
+                  global.tasks.by_spider[spider_id].render_ids[circle_id] = true
+                end
                 if previous_position then
-                  draw_line(surface, previous_position, waypoint_position, task_color, 180)
+                  local line_id = draw_line(surface, previous_position, waypoint_position, task_color)
+                  if line_id then
+                    global.tasks.by_entity[entity_id].render_ids[line_id] = true
+                    global.tasks.by_spider[spider_id].render_ids[line_id] = true
+                  end
                 end
                 previous_position = waypoint_position
               end
