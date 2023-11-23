@@ -1026,6 +1026,10 @@ local function on_tick(event)
           table.remove(decon_entities, entity_index)
           goto next_entity
         end
+        if decon_entity.type == "fish" then
+          table.remove(decon_entities, entity_index)
+          goto next_entity
+        end
         local entity_id = entity_uuid(decon_entity)
         if not global.tasks.by_entity[entity_id] then
           local prototype = decon_entity.prototype
