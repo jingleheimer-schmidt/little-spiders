@@ -977,7 +977,7 @@ local function on_tick(event)
     local inventory = player.get_main_inventory()
     if not (inventory and inventory.valid) then goto next_player end
 
-    local player_force = player.force
+    local player_force = { player.force.name, "neutral" }
     local surface = player_entity.surface
     local character_position_x = player_entity.position.x
     local character_position_y = player_entity.position.y
