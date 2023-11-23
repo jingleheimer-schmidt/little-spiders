@@ -676,6 +676,7 @@ local function on_script_path_request_finished(event)
                 if previous_position then
                   draw_line(surface, previous_position, waypoint_position, task_color, 180)
                 end
+                previous_position = waypoint_position
               end
             end
 
