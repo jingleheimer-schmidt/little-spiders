@@ -163,32 +163,84 @@ end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 
----@param spider_id uuid
----@param entity_id uuid
+-- ---@param spider_id uuid
+-- ---@param entity_id uuid
+-- ---@param spider LuaEntity
+-- ---@param player LuaPlayer
+-- ---@param player_entity LuaEntity?
+-- local function abandon_task(spider_id, entity_id, spider, player, player_entity)
+--   destroy_associated_renderings(spider_id)
+--   local entity_path_request_id = global.tasks.by_entity[entity_id].path_request_id
+--   local spider_path_request_id = global.tasks.by_spider[spider_id].path_request_id
+--   if entity_path_request_id then
+--     global.spider_path_requests[entity_path_request_id] = nil
+--     global.spider_path_to_position_requests[entity_path_request_id] = nil
+--   end
+--   if spider_path_request_id then
+--     global.spider_path_requests[spider_path_request_id] = nil
+--     global.spider_path_to_position_requests[spider_path_request_id] = nil
+--   end
+--   global.path_requested[spider_id] = nil
+--   global.tasks.by_entity[entity_id] = nil
+--   global.tasks.by_spider[spider_id] = nil
+--   local player_index = player.index
+--   local surface_index = spider.surface_index
+--   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+--   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+--   table.insert(global.available_spiders[player_index][surface_index], spider)
+--   spider.color = player.color
+--   spider.autopilot_destination = nil
+--   if player.surface_index == spider.surface_index then
+--     if player_entity and player_entity.valid then
+--       spider.follow_target = player_entity
+--     else
+--       spider.follow_target = nil
+--     end
+--   end
+-- end
+
 ---@param spider LuaEntity
 ---@param player LuaPlayer
+---@param spider_id uuid?
+---@param entity_id uuid?
 ---@param player_entity LuaEntity?
-local function abandon_task(spider_id, entity_id, spider, player, player_entity)
+local function abandon_task(spider, player, spider_id, entity_id, player_entity)
+  spider_id = spider_id or entity_uuid(spider)
+  local task_data = global.tasks.by_spider[spider_id]
+  entity_id = entity_id or task_data and task_data.entity_id
+  player_entity = player_entity or get_player_entity(player)
+
   destroy_associated_renderings(spider_id)
-  local entity_path_request_id = global.tasks.by_entity[entity_id].path_request_id
-  local spider_path_request_id = global.tasks.by_spider[spider_id].path_request_id
-  if entity_path_request_id then
-    global.spider_path_requests[entity_path_request_id] = nil
-    global.spider_path_to_position_requests[entity_path_request_id] = nil
+
+  if spider_id then
+    local spider_task_data = global.tasks.by_spider[spider_id]
+    local spider_path_request_id = spider_task_data and spider_task_data.path_request_id
+    if spider_path_request_id then
+      global.spider_path_requests[spider_path_request_id] = nil
+      global.spider_path_to_position_requests[spider_path_request_id] = nil
+    end
+    global.path_requested[spider_id] = nil
+    global.tasks.by_spider[spider_id] = nil
   end
-  if spider_path_request_id then
-    global.spider_path_requests[spider_path_request_id] = nil
-    global.spider_path_to_position_requests[spider_path_request_id] = nil
+
+  if entity_id then
+    local entity_task_data = global.tasks.by_entity[entity_id]
+    local entity_path_request_id = entity_task_data and entity_task_data.path_request_id
+    if entity_path_request_id then
+      global.spider_path_requests[entity_path_request_id] = nil
+      global.spider_path_to_position_requests[entity_path_request_id] = nil
+    end
+    global.tasks.by_entity[entity_id] = nil
   end
-  global.path_requested[spider_id] = nil
-  global.tasks.by_entity[entity_id] = nil
-  global.tasks.by_spider[spider_id] = nil
+
   local player_index = player.index
   local surface_index = spider.surface_index
   global.available_spiders[player_index] = global.available_spiders[player_index] or {}
   global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
   table.insert(global.available_spiders[player_index][surface_index], spider)
+
   spider.color = player.color
+
   spider.autopilot_destination = nil
   if player.surface_index == spider.surface_index then
     if player_entity and player_entity.valid then
@@ -235,7 +287,7 @@ local function relink_following_spiders(player)
           local entity_id = task_data.entity_id
           local entity = task_data.entity
           if not (entity and entity.valid) then
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
           --   global.tasks.by_entity[entity_id] = nil
           --   global.tasks.by_spider[spider_id] = nil
           --   -- table.insert(global.available_spiders[player_index][spider.surface_index], spider)
@@ -360,13 +412,13 @@ local function on_spider_command_completed(event)
         local task_type = task_data.task_type
 
         if not global.spiders_enabled[player.index] then
-          abandon_task(spider_id, entity_id, spider, player)
+          abandon_task(spider, player, spider_id, entity_id)
           debug_print("task abandoned: player disabled little spiders", player, spider, color.red)
           return
         end
 
         if not player.valid then
-          abandon_task(spider_id, entity_id, spider, player)
+          abandon_task(spider, player, spider_id, entity_id)
           debug_print("task abandoned: no valid player", player, spider, color.red)
           return
         end
@@ -374,13 +426,13 @@ local function on_spider_command_completed(event)
         local player_entity = get_player_entity(player)
 
         if not (entity and entity.valid) then
-          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          abandon_task(spider, player, spider_id, entity_id, player_entity)
           debug_print("task abandoned: no valid entity", player, spider, color.red)
           return
         end
 
         if not (player_entity and player_entity.valid) then
-          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          abandon_task(spider, player, spider_id, entity_id, player_entity)
           debug_print("task abandoned: no valid player entity", player, spider, color.red)
           return
         end
@@ -388,7 +440,7 @@ local function on_spider_command_completed(event)
         local inventory = player_entity.get_inventory(defines.inventory.character_main)
 
         if not (inventory and inventory.valid) then
-          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          abandon_task(spider, player, spider_id, entity_id, player_entity)
           debug_print("task abandoned: no valid inventory", player, spider, color.red)
           return
         end
@@ -438,15 +490,15 @@ local function on_spider_command_completed(event)
                 complete_task(spider_id, entity_id, spider, player, player_entity)
                 debug_print("deconstruct task completed", player, spider, color.green)
               else
-                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                abandon_task(spider, player, spider_id, entity_id, player_entity)
                 debug_print("task abandoned: no cliff explosives", player, spider, color.red)
               end
             else
-              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              abandon_task(spider, player, spider_id, entity_id, player_entity)
               debug_print("task abandoned: no space in inventory", player, spider, color.red)
             end
           else
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
             debug_print("task abandoned: entity no longer needs to be deconstructed", player, spider, color.red)
           end
 
@@ -470,7 +522,7 @@ local function on_spider_command_completed(event)
                 local spider_position = spider.position
                 local distance_to_player = distance(ghost_position, player.position)
                 if distance_to_player > double_max_task_range then
-                  abandon_task(spider_id, entity_id, spider, player, player_entity)
+                  abandon_task(spider, player, spider_id, entity_id, player_entity)
                   debug_print("task abandoned: player too far from ghost", player, spider, color.red)
                 else
                   for i = 1, 90, 10 do
@@ -482,11 +534,11 @@ local function on_spider_command_completed(event)
                 end
               end
             else
-              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              abandon_task(spider, player, spider_id, entity_id, player_entity)
               debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
             end
           else
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
             debug_print("task abandoned: no items_to_place_this", player, spider, color.red)
           end
 
@@ -544,15 +596,15 @@ local function on_spider_command_completed(event)
                   debug_print("upgrade task failed: retrying", player, spider, color.red)
                 end
               else
-                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                abandon_task(spider, player, spider_id, entity_id, player_entity)
                 debug_print("task abandoned: not enough items in inventory", player, spider, color.red)
               end
             else
-              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              abandon_task(spider, player, spider_id, entity_id, player_entity)
               debug_print("task abandoned: no upgrade_target or item_stack", player, spider, color.red)
             end
           else
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
             debug_print("task abandoned: entity no longer needs to be upgraded", player, spider, color.red)
           end
         elseif task_type == "item_proxy" then
@@ -577,15 +629,15 @@ local function on_spider_command_completed(event)
                 complete_task(spider_id, entity_id, spider, player, player_entity)
                 debug_print("item_proxy task completed", player, spider, color.green)
               else
-                abandon_task(spider_id, entity_id, spider, player, player_entity)
+                abandon_task(spider, player, spider_id, entity_id, player_entity)
                 debug_print("proxy task abandoned: could not insert", player, spider, color.red)
               end
             else
-              abandon_task(spider_id, entity_id, spider, player, player_entity)
+              abandon_task(spider, player, spider_id, entity_id, player_entity)
               debug_print("proxy task abandoned: not enough items in inventory", player, spider, color.red)
             end
           else
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
             debug_print("proxy task abandoned: no proxy_target", player, spider, color.red)
           end
         end
@@ -612,7 +664,7 @@ local function on_spider_command_completed(event)
         -- global.tasks.nudges[spider_id] = nil
         -- global.tasks.by_spider[spider_id] = nil
         if entity_id then
-          abandon_task(spider_id, entity_id, spider, player)
+          abandon_task(spider, player, spider_id, entity_id)
         end
         return
       end
@@ -620,17 +672,7 @@ local function on_spider_command_completed(event)
       -- if the player doesn't have a valid character, clear any tasks and return it to the player's available spiders table for when they do have a character again
       local player_entity = get_player_entity(player)
       if not (player_entity and player_entity.valid) then
-        local entity_id = active_task_data and active_task_data.entity_id
-        -- if entity_id then
-        --   local player_index = player.index
-        --   local surface_index = spider.surface_index
-        --   table.insert(global.available_spiders[player_index][surface_index], spider)
-        --   global.tasks.by_entity[entity_id] = nil
-        --   global.tasks.by_spider[spider_id] = nil
-        -- end
-        if entity_id then
-          abandon_task(spider_id, entity_id, spider, player)
-        end
+        abandon_task(spider, player)
         global.tasks.nudges[spider_id] = nil
         return
       end
@@ -640,7 +682,7 @@ local function on_spider_command_completed(event)
       local path_requested = global.path_requested[spider_id]
       if (distance_to_player > double_max_task_range) and (not path_requested) then
         if active_task_data then
-          abandon_task(spider_id, active_task_data.entity_id, spider, player)
+          abandon_task(spider, player)
         else
           request_spider_path_to_position(spider.surface, spider_id, spider, spider.position, player.position, player)
         end
@@ -664,7 +706,7 @@ local function on_script_path_request_finished(event)
     local player_entity = get_player_entity(player)
     if (spider and spider.valid and entity and entity.valid and player_entity and player_entity.valid) then
       if not global.spiders_enabled[player.index] then
-        abandon_task(spider_id, entity_id, spider, player, player_entity)
+        abandon_task(spider, player, spider_id, entity_id, player_entity)
         return
       end
       if spider.surface_index == player.surface_index then
@@ -714,7 +756,7 @@ local function on_script_path_request_finished(event)
 
           else
             -- If no path was found, abandon the task and add a random nearby destination for the spider autopilot
-            abandon_task(spider_id, entity_id, spider, player, player_entity)
+            abandon_task(spider, player, spider_id, entity_id, player_entity)
             -- if math.random() < 0.125 then
             --   spider.add_autopilot_destination(random_position_on_circumference(spider.position, 3))
             -- end
@@ -725,13 +767,13 @@ local function on_script_path_request_finished(event)
             draw_dotted_line(surface, spider, entity, color.red, 30, true)
           end
         else
-          abandon_task(spider_id, entity_id, spider, player, player_entity)
+          abandon_task(spider, player, spider_id, entity_id, player_entity)
         end
       else
-        abandon_task(spider_id, entity_id, spider, player, player_entity)
+        abandon_task(spider, player, spider_id, entity_id, player_entity)
       end
     else
-      abandon_task(spider_id, entity_id, spider, player, player_entity)
+      abandon_task(spider, player, spider_id, entity_id, player_entity)
     end
     global.spider_path_requests[path_request_id] = nil
     global.path_requested[spider_id] = nil
@@ -974,7 +1016,7 @@ local function on_tick(event)
           if not global.path_requested[spider_id] then
             if exceeds_distance_limit then
               if active_task then
-                abandon_task(spider_id, active_task.entity_id, spider, player, player_entity)
+                abandon_task(spider, player, spider_id, active_task.entity_id, player_entity)
               else
                 nudge_spidertron(spider, spider_id, player)
               end

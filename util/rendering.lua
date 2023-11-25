@@ -89,6 +89,7 @@ end
 
 ---@param spider_id uuid
 local function destroy_associated_renderings(spider_id)
+    if not global.tasks.by_spider[spider_id] then return end
     for render_id, bool in pairs(global.tasks.by_spider[spider_id].render_ids) do
         if bool then
             rendering.destroy(render_id)
