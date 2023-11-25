@@ -163,6 +163,63 @@ end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 
+---@param spider_id uuid
+---@param entity_id uuid
+---@param spider LuaEntity
+---@param player LuaPlayer
+---@param player_entity LuaEntity?
+local function abandon_task(spider_id, entity_id, spider, player, player_entity)
+  destroy_associated_renderings(spider_id)
+  local entity_path_request_id = global.tasks.by_entity[entity_id].path_request_id
+  local spider_path_request_id = global.tasks.by_spider[spider_id].path_request_id
+  if entity_path_request_id then
+    global.spider_path_requests[entity_path_request_id] = nil
+    global.spider_path_to_position_requests[entity_path_request_id] = nil
+  end
+  if spider_path_request_id then
+    global.spider_path_requests[spider_path_request_id] = nil
+    global.spider_path_to_position_requests[spider_path_request_id] = nil
+  end
+  global.path_requested[spider_id] = nil
+  global.tasks.by_entity[entity_id] = nil
+  global.tasks.by_spider[spider_id] = nil
+  local player_index = player.index
+  local surface_index = spider.surface_index
+  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+  table.insert(global.available_spiders[player_index][surface_index], spider)
+  spider.color = player.color
+  spider.autopilot_destination = nil
+  if player.surface_index == spider.surface_index then
+    if player_entity and player_entity.valid then
+      spider.follow_target = player_entity
+    else
+      spider.follow_target = nil
+    end
+  end
+end
+
+---@param spider_id uuid
+---@param entity_id uuid
+---@param spider LuaEntity
+---@param player LuaPlayer
+---@param player_entity LuaEntity?
+local function complete_task(spider_id, entity_id, spider, player, player_entity)
+  destroy_associated_renderings(spider_id)
+  global.tasks.by_entity[entity_id] = nil
+  global.tasks.by_spider[spider_id] = nil
+  local player_index = player.index
+  local surface_index = spider.surface_index
+  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
+  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
+  table.insert(global.available_spiders[player_index][surface_index], spider)
+  spider.color = player.color
+  spider.autopilot_destination = nil
+  if player.surface_index == spider.surface_index then
+    spider.follow_target = player_entity
+  end
+end
+
 ---@param player LuaPlayer
 local function relink_following_spiders(player)
   local player_index = player.index
@@ -172,6 +229,18 @@ local function relink_following_spiders(player)
   for index, spider in pairs(spiders) do
     if spider.valid then
       if spider.surface_index == player.surface_index then
+        local spider_id = entity_uuid(spider)
+        local task_data = global.tasks.by_spider[spider_id]
+        if task_data then
+          local entity_id = task_data.entity_id
+          local entity = task_data.entity
+          if not (entity and entity.valid) then
+            abandon_task(spider_id, entity_id, spider, player, player_entity)
+          --   global.tasks.by_entity[entity_id] = nil
+          --   global.tasks.by_spider[spider_id] = nil
+          --   -- table.insert(global.available_spiders[player_index][spider.surface_index], spider)
+          end
+        end
         local destinations = spider.autopilot_destinations
         if player_entity then
           spider.color = player.color
@@ -180,22 +249,11 @@ local function relink_following_spiders(player)
           spider.color = color.white
           spider.follow_target = nil
         end
-        local spider_id = entity_uuid(spider)
         local was_nudged = global.tasks.nudges[spider_id]
         -- re-add destinations to autopilot since they were cleared when updating the follow_target, unless the destinations were part of a "nudge" task (ok to abandon)
         if destinations and not was_nudged then
           for _, destination in pairs(destinations) do
             spider.add_autopilot_destination(destination)
-          end
-        end
-        local task_data = global.tasks.by_spider[spider_id]
-        if task_data then
-          local entity_id = task_data.entity_id
-          local entity = task_data.entity
-          if not (entity and entity.valid) then
-            global.tasks.by_entity[entity_id] = nil
-            global.tasks.by_spider[spider_id] = nil
-            -- table.insert(global.available_spiders[player_index][spider.surface_index], spider)
           end
         end
       end
@@ -264,59 +322,6 @@ local function nudge_spidertron(spidertron, spider_id, player)
       spidertron.add_autopilot_destination(new_position)
       request_spider_path_to_position(surface, spider_id, spidertron, new_position, player.position, player)
     end
-  end
-end
-
----@param spider_id uuid
----@param entity_id uuid
----@param spider LuaEntity
----@param player LuaPlayer
----@param player_entity LuaEntity?
-local function abandon_task(spider_id, entity_id, spider, player, player_entity)
-  destroy_associated_renderings(spider_id)
-  local entity_path_request_id = global.tasks.by_entity[entity_id].path_request_id
-  local spider_path_request_id = global.tasks.by_spider[spider_id].path_request_id
-  if entity_path_request_id then
-    global.spider_path_requests[entity_path_request_id] = nil
-    global.spider_path_to_position_requests[entity_path_request_id] = nil
-  end
-  if spider_path_request_id then
-    global.spider_path_requests[spider_path_request_id] = nil
-    global.spider_path_to_position_requests[spider_path_request_id] = nil
-  end
-  global.path_requested[spider_id] = nil
-  global.tasks.by_entity[entity_id] = nil
-  global.tasks.by_spider[spider_id] = nil
-  local player_index = player.index
-  local surface_index = spider.surface_index
-  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-  table.insert(global.available_spiders[player_index][surface_index], spider)
-  spider.color = player.color
-  spider.autopilot_destination = nil
-  if player.surface_index == spider.surface_index then
-    spider.follow_target = player_entity
-  end
-end
-
----@param spider_id uuid
----@param entity_id uuid
----@param spider LuaEntity
----@param player LuaPlayer
----@param player_entity LuaEntity?
-local function complete_task(spider_id, entity_id, spider, player, player_entity)
-  destroy_associated_renderings(spider_id)
-  global.tasks.by_entity[entity_id] = nil
-  global.tasks.by_spider[spider_id] = nil
-  local player_index = player.index
-  local surface_index = spider.surface_index
-  global.available_spiders[player_index] = global.available_spiders[player_index] or {}
-  global.available_spiders[player_index][surface_index] = global.available_spiders[player_index][surface_index] or {}
-  table.insert(global.available_spiders[player_index][surface_index], spider)
-  spider.color = player.color
-  spider.autopilot_destination = nil
-  if player.surface_index == spider.surface_index then
-    spider.follow_target = player_entity
   end
 end
 
@@ -601,11 +606,14 @@ local function on_spider_command_completed(event)
       -- if the player isn't valid anymore, clear any tasks associated with it
       if not (player and player.valid) then
         local entity_id = active_task_data and active_task_data.entity_id
+        -- if entity_id then
+        --   global.tasks.by_entity[entity_id] = nil
+        -- end
+        -- global.tasks.nudges[spider_id] = nil
+        -- global.tasks.by_spider[spider_id] = nil
         if entity_id then
-          global.tasks.by_entity[entity_id] = nil
+          abandon_task(spider_id, entity_id, spider, player)
         end
-        global.tasks.nudges[spider_id] = nil
-        global.tasks.by_spider[spider_id] = nil
         return
       end
 
@@ -613,12 +621,15 @@ local function on_spider_command_completed(event)
       local player_entity = get_player_entity(player)
       if not (player_entity and player_entity.valid) then
         local entity_id = active_task_data and active_task_data.entity_id
+        -- if entity_id then
+        --   local player_index = player.index
+        --   local surface_index = spider.surface_index
+        --   table.insert(global.available_spiders[player_index][surface_index], spider)
+        --   global.tasks.by_entity[entity_id] = nil
+        --   global.tasks.by_spider[spider_id] = nil
+        -- end
         if entity_id then
-          local player_index = player.index
-          local surface_index = spider.surface_index
-          table.insert(global.available_spiders[player_index][surface_index], spider)
-          global.tasks.by_entity[entity_id] = nil
-          global.tasks.by_spider[spider_id] = nil
+          abandon_task(spider_id, entity_id, spider, player)
         end
         global.tasks.nudges[spider_id] = nil
         return
@@ -719,6 +730,8 @@ local function on_script_path_request_finished(event)
       else
         abandon_task(spider_id, entity_id, spider, player, player_entity)
       end
+    else
+      abandon_task(spider_id, entity_id, spider, player, player_entity)
     end
     global.spider_path_requests[path_request_id] = nil
     global.path_requested[spider_id] = nil
