@@ -561,7 +561,11 @@ local function on_spider_command_completed(event)
               if proxy_target.can_insert(item_to_insert) then
                 proxy_target.insert(item_to_insert)
                 inventory.remove(item_to_insert)
-                entity.destroy()
+                items[item_name] = nil
+                entity.item_requests = items
+                if not next(items) then
+                  entity.destroy()
+                end
                 request_fulfilled = true
               end
               if request_fulfilled then
