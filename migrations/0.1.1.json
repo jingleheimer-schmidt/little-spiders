@@ -1,0 +1,53 @@
+
+{
+    "entity": [
+        [
+            "little-spidertron",
+            "spiderbot"
+        ],
+        [
+            "little-spidertron-leg-1",
+            "spiderbot-leg-1"
+        ],
+        [
+            "little-spidertron-leg-2",
+            "spiderbot-leg-2"
+        ],
+        [
+            "little-spidertron-leg-3",
+            "spiderbot-leg-3"
+        ],
+        [
+            "little-spidertron-leg-4",
+            "spiderbot-leg-4"
+        ],
+        [
+            "little-spidertron-leg-5",
+            "spiderbot-leg-5"
+        ],
+        [
+            "little-spidertron-leg-6",
+            "spiderbot-leg-6"
+        ],
+        [
+            "little-spidertron-leg-7",
+            "spiderbot-leg-7"
+        ],
+        [
+            "little-spidertron-leg-8",
+            "spiderbot-leg-8"
+        ]
+    ],
+    "item": [
+        [
+            "little-spidertron",
+            "spiderbot"
+        ]
+    ],
+    "recipe": [
+        [
+            "little-spidertron",
+            "spiderbot"
+        ]
+    ]
+}
