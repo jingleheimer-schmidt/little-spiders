@@ -176,6 +176,18 @@ end
 
 script.on_event(defines.events.on_entity_destroyed, on_spider_destroyed)
 
+---@param event EventData.on_pre_player_mined_item
+local function on_player_mined_entity(event)
+  local player = game.get_player(event.player_index)
+  local entity = event.entity
+  if is_backer_name(entity.entity_label) then
+    entity.entity_label = ""
+  end
+  entity.color = player and player.color or entity.color
+end
+
+script.on_event(defines.events.on_pre_player_mined_item, on_player_mined_entity, filter)
+
 -- ---@param spider_id uuid
 -- ---@param entity_id uuid
 -- ---@param spider LuaEntity
