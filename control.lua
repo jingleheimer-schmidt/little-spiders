@@ -101,6 +101,18 @@ local function random_backer_name()
   return backer_names[index]
 end
 
+---@param name string
+---@return boolean
+local function is_backer_name(name)
+  if not global.backer_name_lookup then
+    global.backer_name_lookup = {}
+    for _, backer_name in pairs(game.backer_names) do
+      global.backer_name_lookup[backer_name] = true
+    end
+  end
+  return global.backer_name_lookup[name]
+end
+
 ---@param event EventData.on_built_entity
 local function on_spider_created(event)
   local spider = event.created_entity
@@ -122,7 +134,8 @@ local function on_spider_created(event)
     end
   end
 
-  if not spider.entity_label then
+  local entity_label = spider.entity_label
+  if (not entity_label) or (is_backer_name(entity_label)) then
     spider.entity_label = random_backer_name()
   end
 end
