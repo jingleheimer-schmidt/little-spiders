@@ -162,6 +162,7 @@ local function on_spider_destroyed(event)
       end
     end
   end
+  destroy_associated_renderings(unit_number)
   local spider_task = global.tasks.by_spider[unit_number]
   if spider_task then
     local entity_id = spider_task.entity_id
