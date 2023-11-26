@@ -1,4 +1,7 @@
 
+local sound_probability = 0.125
+local sound_volume = 1
+
 local little_spider_arguments = {
     scale = 0.25,
     leg_scale = 0.82,
@@ -17,25 +20,29 @@ little_spider_entity.is_military_target = false
 little_spider_entity.torso_rotation_speed = little_spider_entity.torso_rotation_speed * 2
 little_spider_entity.chunk_exploration_radius = 1
 little_spider_entity.minable.mining_time = little_spider_entity.minable.mining_time / 4
+little_spider_entity.working_sound.probability = 1/4
+little_spider_entity.minimap_representation.scale = 0.125
 local legs = little_spider_entity.spider_engine.legs
 if legs[1] then
     for _, leg in pairs(legs) do
         for _, trigger in pairs(leg.leg_hit_the_ground_trigger) do
             trigger.repeat_count = 1
-            trigger.probability = 0.0125
+            trigger.probability = 1/32
         end
         local leg_name = leg.leg
         local leg_prototype = data.raw["spider-leg"][leg_name]
-        leg_prototype.walking_sound_volume_modifier = 0.125
+        leg_prototype.walking_sound_volume_modifier = 0
+        leg_prototype.working_sound.probability = sound_probability
     end
 else
     for _, trigger in pairs(legs.leg_hit_the_ground_trigger) do
         trigger.repeat_count = 1
-        trigger.probability = 0.125
+        trigger.probability = 1/32
     end
     local leg_name = legs.leg
     local leg_prototype = data.raw["spider-leg"][leg_name]
-    leg_prototype.walking_sound_volume_modifier = 0.125
+    leg_prototype.walking_sound_volume_modifier = 0
+    leg_prototype.working_sound.probability = sound_probability
 end
 local selection_box = little_spider_entity.selection_box
 if selection_box then
